@@ -1,0 +1,159 @@
+# Codemagic CI/CD for 3D Ball Adventure
+#
+# Detected technology (NOT Flutter):
+#   - Game engine : Three.js (WebGL 3D)  -> src/main.js
+#   - Bundler     : Vite 7               -> builds the game into dist/
+#   - Android     : Capacitor 8          -> wraps dist/ in a native Android app
+#
+# The game source is stored in 3d-ball-adventure-source.zip in the repo root.
+# The build unzips it automatically; nothing in the game is changed.
+#
+# Two workflows (choose one when you tap "Start new build"):
+#   1. android-release-apk-quick  -> Signed release APK, zero setup.
+#                                    Creates a signing key on first use and
+#                                    saves it as a build artifact.
+#   2. android-release-apk        -> Signed release APK using YOUR keystore
+#                                    uploaded to Codemagic (reference name:
+#                                    ball_keystore). Use this for all builds
+#                                    after the first one so updates install
+#                                    over the old app.
+
+definitions:
+  env: &env
+    node: 22
+    java: 21
+    vars:
+      APP_NAME: "3D Ball Adventure"
+
+  scripts:
+    - &prepare_source
+      name: Locate game source (unzip if needed)
+      script: |
+        set -e
+        if [ -f "$CM_BUILD_DIR/package.json" ]; then
+          APP_DIR="$CM_BUILD_DIR"
+        else
+          ZIP=$(ls "$CM_BUILD_DIR"/*.zip | head -n 1)
+          echo "Extracting $ZIP"
+          mkdir -p "$CM_BUILD_DIR/_src"
+          unzip -q -o "$ZIP" -d "$CM_BUILD_DIR/_src"
+          APP_DIR=$(dirname "$(find "$CM_BUILD_DIR/_src" -name package.json -not -path '*/node_modules/*' | head -n 1)")
+        fi
+        echo "Game project directory: $APP_DIR"
+        echo "APP_DIR=$APP_DIR" >> $CM_ENV
+        ls -la "$APP_DIR"
+
+    - &build_web
+      name: Install dependencies and build the Three.js game (Vite)
+      script: |
+        set -e
+        cd "$APP_DIR"
+        npm install --no-audit --no-fund
+        npm run build
+
+    - &add_android
+      name: Create Android project with Capacitor
+      script: |
+        set -e
+        cd "$APP_DIR"
+        if [ ! -d android ]; then npx cap add android; fi
+        npx cap sync android
+        echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+        # Unique, always-increasing version code so updates install cleanly
+        sed -i.bak -E "s/versionCode [0-9]+/versionCode ${BUILD_NUMBER:-1}/" android/app/build.gradle
+        sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"1.0.${BUILD_NUMBER:-1}\"/" android/app/build.gradle
+        chmod +x android/gradlew
+
+    - &assemble_release
+      name: Build release APK (Gradle)
+      script: |
+        set -e
+        cd "$APP_DIR/android"
+        ./gradlew assembleRelease --no-daemon
+
+    - &sign_apk
+      name: Sign release APK
+      script: |
+        set -e
+        BT=$(ls "$ANDROID_SDK_ROOT/build-tools" | sort -V | tail -n 1)
+        TOOLS="$ANDROID_SDK_ROOT/build-tools/$BT"
+        IN="$APP_DIR/android/app/build/outputs/apk/release/app-release-unsigned.apk"
+        mkdir -p "$CM_BUILD_DIR/output"
+        OUT="$CM_BUILD_DIR/output/3d-ball-adventure-release-${BUILD_NUMBER:-1}.apk"
+        "$TOOLS/zipalign" -p -f 4 "$IN" /tmp/aligned.apk
+        "$TOOLS/apksigner" sign \
+          --ks "$CM_KEYSTORE_PATH" \
+          --ks-pass "pass:$CM_KEYSTORE_PASSWORD" \
+          --ks-key-alias "$CM_KEY_ALIAS" \
+          --key-pass "pass:$CM_KEY_PASSWORD" \
+          --out "$OUT" /tmp/aligned.apk
+        "$TOOLS/apksigner" verify --print-certs "$OUT"
+        echo "Signed APK: $OUT"
+
+workflows:
+  # ---------------------------------------------------------------
+  # 1) QUICK: no setup at all. Good for your very first build.
+  # ---------------------------------------------------------------
+  android-release-apk-quick:
+    name: Android Release APK (quick, auto key)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      <<: *env
+    scripts:
+      - *prepare_source
+      - *build_web
+      - *add_android
+      - *assemble_release
+      - name: Create a signing key for this build
+        script: |
+          set -e
+          export CM_KEYSTORE_PATH="$CM_BUILD_DIR/output/ball-adventure-keystore.jks"
+          export CM_KEY_ALIAS="balladventure"
+          PASS=$(openssl rand -hex 12)
+          mkdir -p "$CM_BUILD_DIR/output"
+          keytool -genkeypair -v -keystore "$CM_KEYSTORE_PATH" \
+            -alias "$CM_KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$PASS" -keypass "$PASS" \
+            -dname "CN=3D Ball Adventure, O=Ball Adventure, C=BD"
+          cat > "$CM_BUILD_DIR/output/KEYSTORE-INFO.txt" <<EOF
+          Keystore file : ball-adventure-keystore.jks
+          Key alias     : $CM_KEY_ALIAS
+          Keystore pass : $PASS
+          Key password  : $PASS
+          KEEP THIS FILE AND THE .jks FILE PRIVATE AND SAFE.
+          Upload the .jks to Codemagic (reference name: ball_keystore)
+          and use the "android-release-apk" workflow for future builds.
+          EOF
+          echo "CM_KEYSTORE_PATH=$CM_KEYSTORE_PATH" >> $CM_ENV
+          echo "CM_KEY_ALIAS=$CM_KEY_ALIAS" >> $CM_ENV
+          echo "CM_KEYSTORE_PASSWORD=$PASS" >> $CM_ENV
+          echo "CM_KEY_PASSWORD=$PASS" >> $CM_ENV
+      - *sign_apk
+    artifacts:
+      - output/*.apk
+      - output/*.jks
+      - output/KEYSTORE-INFO.txt
+
+  # ---------------------------------------------------------------
+  # 2) PERMANENT: uses your keystore uploaded to Codemagic.
+  #    Codemagic > Team settings > codemagic.yaml settings >
+  #    Code signing identities > Android keystores
+  #    Reference name must be: ball_keystore
+  # ---------------------------------------------------------------
+  android-release-apk:
+    name: Android Release APK (signed with ball_keystore)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      <<: *env
+      android_signing:
+        - ball_keystore
+    scripts:
+      - *prepare_source
+      - *build_web
+      - *add_android
+      - *assemble_release
+      - *sign_apk
+    artifacts:
+      - output/*.apk
