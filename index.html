@@ -8,93 +8,164 @@
 </head>
 <body>
   <div id="app">
+    <!-- Loading screen -->
+    <div id="loading">
+      <div class="menu-ball"></div>
+      <div class="logo"><span>MARBLO</span><small>ISLAND ROLL</small></div>
+      <div class="load-bar"><i></i></div>
+      <p id="loadTip"></p>
+    </div>
+
     <!-- In-game HUD -->
     <div id="hud" class="hidden">
       <div class="hud-row">
         <button id="pauseBtn" class="icon-btn" aria-label="Pause">Ⅱ</button>
-        <div class="hud-pill">LV <span id="level">1</span></div>
+        <div class="hud-pill" id="hudLevel">LV 1</div>
         <div class="hud-pill"><span class="coin-ico"></span><span id="score">0</span></div>
         <div id="lives" class="hud-pill lives"></div>
       </div>
       <div id="progress"><div id="progressFill"></div></div>
+      <div id="hudDist" class="hud-dist hidden">0 m</div>
       <div id="powers"></div>
     </div>
     <div id="message" class="hidden"></div>
+    <div id="fps" class="hidden"></div>
 
-    <!-- Main menu -->
-    <div id="menu" class="panel">
+    <!-- Main menu (same simple layout as before) -->
+    <div id="menu" class="panel hidden">
       <div class="menu-ball"></div>
       <div class="logo"><span id="gameName">MARBLO</span><small id="gameSub">ISLAND ROLL</small></div>
-      <div class="wallet"><span class="coin-ico"></span><span id="walletMenu">0</span></div>
-      <button id="playBtn" class="main-btn">PLAY</button>
+      <div class="wallet"><span class="coin-ico"></span><span class="walletAmt">0</span></div>
+      <button id="playBtn" class="main-btn" data-i18n="play">PLAY</button>
       <div class="menu-grid">
-        <button id="levelsBtn" class="secondary-btn">🗺️ LEVELS</button>
-        <button id="shopBtn" class="secondary-btn">🛒 SHOP</button>
-        <button id="settingsBtn" class="secondary-btn wide">⚙️ SETTINGS</button>
+        <button id="levelsBtn" class="secondary-btn">🗺️ <span data-i18n="levels">LEVELS</span></button>
+        <button id="shopBtn" class="secondary-btn">🛒 <span data-i18n="shop">SHOP</span><i class="dot hidden" id="shopDot"></i></button>
+        <button id="endlessBtn" class="secondary-btn">♾️ <span data-i18n="endless">ENDLESS</span></button>
+        <button id="missionsBtn" class="secondary-btn">🏆 <span data-i18n="missions">MISSIONS</span><i class="dot hidden" id="missionDot"></i></button>
+        <button id="settingsBtn" class="secondary-btn wide">⚙️ <span data-i18n="settings">SETTINGS</span></button>
       </div>
       <div class="menu-foot" id="menuFoot">3D OFFLINE GAME</div>
     </div>
 
     <!-- Level select -->
-    <div id="levelsPanel" class="panel hidden">
-      <h1>LEVELS</h1>
+    <div id="levelsPanel" class="panel hidden top">
+      <h1 data-i18n="levels">LEVELS</h1>
+      <div id="worldTabs" class="hscroll"></div>
+      <h2 id="worldTitle"></h2>
       <div id="levelGrid"></div>
-      <button class="secondary-btn back-btn" data-back>◀ BACK</button>
+      <div id="worldLocked" class="hidden"></div>
+      <button class="secondary-btn back-btn" data-back data-i18n="back">◀ BACK</button>
     </div>
 
     <!-- Shop -->
-    <div id="shopPanel" class="panel hidden">
-      <h1>BALL SHOP</h1>
-      <div class="wallet"><span class="coin-ico"></span><span id="walletShop">0</span></div>
+    <div id="shopPanel" class="panel hidden top">
+      <div class="shop-head">
+        <div id="previewBox"></div>
+        <div class="shop-head-r">
+          <h1 data-i18n="shop">SHOP</h1>
+          <div class="wallet"><span class="coin-ico"></span><span class="walletAmt">0</span></div>
+        </div>
+      </div>
+      <div id="offer" class="offer hidden"></div>
+      <div id="shopTabs" class="tabs hscroll"></div>
       <div id="shopGrid"></div>
-      <button class="secondary-btn back-btn" data-back>◀ BACK</button>
+      <button class="secondary-btn back-btn" data-back data-i18n="back">◀ BACK</button>
+    </div>
+
+    <!-- Endless -->
+    <div id="endlessPanel" class="panel hidden">
+      <h1 data-i18n="endlessTitle">ENDLESS RUN</h1>
+      <div class="big-emoji">♾️</div>
+      <p id="endlessBest"></p>
+      <p class="small" data-i18n="chooseWorld">Choose a world</p>
+      <div id="endlessWorlds" class="chips"></div>
+      <button id="endlessStart" class="main-btn" data-i18n="start">START</button>
+      <button class="secondary-btn back-btn" data-back data-i18n="back">◀ BACK</button>
+    </div>
+
+    <!-- Missions -->
+    <div id="missionsPanel" class="panel hidden top">
+      <h1 data-i18n="missions">MISSIONS</h1>
+      <div class="tabs"><button class="tab on" data-mtab="daily" data-i18n="t_daily">DAILY</button><button class="tab" data-mtab="ach" data-i18n="t_achieve">ACHIEVEMENTS</button></div>
+      <p id="missionReset" class="small"></p>
+      <div id="missionList" class="list"></div>
+      <button class="secondary-btn back-btn" data-back data-i18n="back">◀ BACK</button>
     </div>
 
     <!-- Settings -->
-    <div id="settingsPanel" class="panel hidden">
-      <h1>SETTINGS</h1>
-      <div class="setting"><span>🎵 Music</span><button class="toggle" data-set="music"></button></div>
-      <div class="setting"><span>🔊 Sound effects</span><button class="toggle" data-set="sfx"></button></div>
-      <div class="setting"><span>📳 Vibration</span><button class="toggle" data-set="vibe"></button></div>
-      <div class="setting"><span>🎮 Controls</span><button class="choice" data-choice="control"></button></div>
-      <div class="setting"><span>✨ Graphics</span><button class="choice" data-choice="quality"></button></div>
-      <a id="privacyLink" class="privacy" target="_blank" rel="noopener">Privacy policy</a>
-      <button class="secondary-btn back-btn" data-back>◀ BACK</button>
+    <div id="settingsPanel" class="panel hidden top">
+      <h1 data-i18n="settings">SETTINGS</h1>
+      <div id="settingsBody" class="list"></div>
+      <button class="secondary-btn back-btn" data-back data-i18n="back">◀ BACK</button>
+    </div>
+
+    <!-- How to play -->
+    <div id="howtoPanel" class="panel hidden">
+      <h1 data-i18n="howTo">How to play</h1>
+      <div class="howto" data-i18n-html="howToText"></div>
+      <button class="secondary-btn" id="howtoBack" data-i18n="back">◀ BACK</button>
     </div>
 
     <!-- Pause -->
     <div id="pausePanel" class="panel hidden">
-      <h1>PAUSED</h1>
-      <button id="resumeBtn" class="main-btn">RESUME</button>
-      <button id="restartBtn" class="secondary-btn">RESTART LEVEL</button>
-      <button id="homeBtn" class="secondary-btn">MAIN MENU</button>
+      <h1 data-i18n="paused">PAUSED</h1>
+      <button id="resumeBtn" class="main-btn" data-i18n="resume">RESUME</button>
+      <button id="restartBtn" class="secondary-btn" data-i18n="restart">RESTART LEVEL</button>
+      <button id="pauseSettings" class="secondary-btn">⚙️ <span data-i18n="settings">SETTINGS</span></button>
+      <button id="homeBtn" class="secondary-btn" data-i18n="mainMenu">MAIN MENU</button>
     </div>
 
     <!-- Level complete -->
     <div id="completePanel" class="panel hidden">
-      <div class="trophy">🏆</div>
-      <h1>LEVEL COMPLETE!</h1>
+      <div class="trophy" id="completeIcon">🏆</div>
+      <h1 id="completeTitle">LEVEL COMPLETE!</h1>
       <div id="starRow" class="stars"><span>★</span><span>★</span><span>★</span></div>
-      <p id="completeText">Great rolling!</p>
-      <button id="nextBtn" class="main-btn">NEXT LEVEL</button>
-      <button id="replayBtn" class="secondary-btn">PLAY AGAIN</button>
-      <button id="menuBtn" class="secondary-btn">MAIN MENU</button>
+      <p id="completeText"></p>
+      <p id="completeTime" class="small"></p>
+      <button id="nextBtn" class="main-btn" data-i18n="nextLevel">NEXT LEVEL</button>
+      <button id="replayBtn" class="secondary-btn" data-i18n="playAgain">PLAY AGAIN</button>
+      <button id="shareBtn" class="secondary-btn" data-i18n="share">SHARE</button>
+      <button id="menuBtn" class="secondary-btn" data-i18n="mainMenu">MAIN MENU</button>
     </div>
 
-    <!-- Game over -->
+    <!-- Game over / run over -->
     <div id="gameoverPanel" class="panel hidden">
-      <div class="trophy">💥</div>
-      <h1>OUT OF LIVES</h1>
-      <p id="gameoverText">Don't give up!</p>
-      <button id="retryBtn" class="main-btn">TRY AGAIN</button>
-      <button id="goMenuBtn" class="secondary-btn">MAIN MENU</button>
+      <div class="trophy" id="goIcon">💥</div>
+      <h1 id="goTitle">OUT OF LIVES</h1>
+      <p id="gameoverText"></p>
+      <button id="contTicket" class="main-btn"></button>
+      <button id="contCoins" class="main-btn"></button>
+      <button id="skipBtn" class="secondary-btn"></button>
+      <button id="retryBtn" class="secondary-btn" data-i18n="tryAgain">TRY AGAIN</button>
+      <button id="goMenuBtn" class="secondary-btn" data-i18n="mainMenu">MAIN MENU</button>
+      <p id="goTip" class="small tip"></p>
+    </div>
+
+    <!-- Popup -->
+    <div id="popup" class="overlay hidden">
+      <div class="popup-card">
+        <div id="popupIcon" class="big-emoji"></div>
+        <h2 id="popupTitle"></h2>
+        <p id="popupText"></p>
+        <button id="popupOk" class="main-btn small-btn" data-i18n="ok">OK</button>
+      </div>
+    </div>
+
+    <!-- Lucky spin -->
+    <div id="spinPop" class="overlay hidden">
+      <div class="popup-card">
+        <h2 data-i18n="spin">LUCKY SPIN</h2>
+        <div class="wheel-wrap"><div class="pointer">▼</div><div id="wheel"></div></div>
+        <button id="spinGo" class="main-btn small-btn"></button>
+        <button id="spinClose" class="secondary-btn small-btn" data-i18n="back">BACK</button>
+      </div>
     </div>
 
     <!-- First-time tutorial -->
     <div id="tutorial" class="hidden">
       <div class="tut-hand">👆</div>
-      <p><b>Drag left / right</b> to steer<br><b>Tap</b> to jump</p>
-      <small>Tap to start</small>
+      <p><span data-i18n-html="tutSteer"></span><br><span data-i18n-html="tutJump"></span></p>
+      <small data-i18n="tapStart">Tap to start</small>
     </div>
 
     <!-- Joystick mode controls -->
@@ -102,6 +173,7 @@
       <div id="joystick"><div id="stick"></div></div>
       <button id="jumpBtn">JUMP</button>
     </div>
+    <button id="jumpBtn2" class="hidden">⤒</button>
   </div>
   <script type="module" src="/src/main.js"></script>
 </body>

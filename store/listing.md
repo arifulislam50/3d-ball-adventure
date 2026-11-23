@@ -6,34 +6,36 @@ Copy these into **Play Console → Grow → Store presence → Main store listin
 Marblo: Island Roll 3D
 
 ## Short description (max 80)
-Roll, jump and dodge across floating islands. 24 levels, 8 balls, fully offline!
+Roll, jump & dodge across 10 magical worlds. 120 levels, Endless mode, offline!
 
 ## Full description
-Roll into a bright 3D adventure! Guide your ball across floating islands, deserts, snowy peaks and a neon night city. Just drag left or right to steer and tap to jump. The ball rolls on its own!
+Roll into a bright 3D adventure! Guide your ball across floating islands, deserts, candy land, under the sea, volcanoes and outer space. Drag left or right to steer and tap to jump: the ball rolls on its own!
 
 ★ SIMPLE ONE-FINGER CONTROLS
-Drag to steer, tap or swipe up to jump. You can also switch to a classic joystick in Settings.
+Drag to steer, tap or swipe up to jump. A classic joystick is also available in Settings.
 
-★ 24 HAND-TUNED LEVELS IN 4 WORLDS
-Green Meadow, Sunset Desert, Frozen Peaks and Neon City. Every level has its own path, with narrow bridges, gaps to jump, ramps, zig-zags and moving platforms.
+★ 120 LEVELS IN 10 WORLDS
+Green Meadow, Sunset Desert, Frozen Peaks, Neon City, Candy Land, Under the Sea, Volcano, Cherry Garden, Magic Forest and Outer Space (with low gravity!). Every 12th level is a BOSS level with falling meteors.
+
+★ ENDLESS MODE
+How far can you roll? The track never ends and gets faster and harder.
 
 ★ OBSTACLES TO DODGE
-Sliding bumpers, sharp spikes, swinging hammers and rolling boulders.
+Bumpers, spikes, swinging hammers, rolling boulders, lasers, crumbling tiles, wind and meteors.
 
-★ POWER-UPS
-⚡ Speed Boost, 🛡️ Shield and 🧲 Coin Magnet.
+★ 7 POWER-UPS
+⚡ Speed, 🛡️ Shield, 🧲 Magnet, 🪽 Double Jump, 🐢 Slow-mo, 👻 Ghost and ✖️2 Coins. Jump pads and speed strips too!
 
-★ 3 LIVES, CHECKPOINTS & STAR RATINGS
-Collect coins to earn up to 3 stars on every level.
+★ HUGE SHOP
+33 balls (5 rare ones you must earn), 13 trails, eyes, hats, glasses, cute pets that collect coins for you, and upgrades.
 
-★ BALL SHOP
-Unlock 8 balls with the coins you collect: Ocean, Melon, Soccer, Lava, Galaxy, Gold, Neon and more.
+★ DAILY FUN
+Daily gift, lucky spin, mystery boxes, daily missions and 25 achievements.
 
-★ BEAUTIFUL & SMOOTH
-Light trails, sparkles, clouds, birds, snow, waves and original music for each world. Low graphics mode for older phones.
+★ BANGLA & ENGLISH
+Play in English or বাংলা.
 
 ★ 100% OFFLINE, NO ADS, NO DATA COLLECTED
-Play anywhere, anytime.
 
 ## Category
 Game → Arcade (or Casual)

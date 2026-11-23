@@ -4,14 +4,17 @@ import { save } from './storage.js';
 let ctx = null, master, sfxGain, musicGain, noiseBuf;
 let musicTimer = null, nextNoteTime = 0, step = 0, song = null;
 
+const sfxLevel = () => (save.settings.sfx ? 0.65 * (save.settings.sfxVol ?? 0.8) : 0);
+const musicLevel = () => (save.settings.music ? 0.24 * (save.settings.musicVol ?? 0.7) : 0);
+
 export function initAudio() {
   if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return;
   ctx = new AC();
   master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
-  sfxGain = ctx.createGain(); sfxGain.gain.value = save.settings.sfx ? 0.5 : 0; sfxGain.connect(master);
-  musicGain = ctx.createGain(); musicGain.gain.value = save.settings.music ? 0.16 : 0; musicGain.connect(master);
+  sfxGain = ctx.createGain(); sfxGain.gain.value = sfxLevel(); sfxGain.connect(master);
+  musicGain = ctx.createGain(); musicGain.gain.value = musicLevel(); musicGain.connect(master);
   if (song) startScheduler();
   noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate);
   const d = noiseBuf.getChannelData(0);
@@ -20,8 +23,8 @@ export function initAudio() {
 
 export function applyAudioSettings() {
   if (!ctx) return;
-  sfxGain.gain.setTargetAtTime(save.settings.sfx ? 0.5 : 0, ctx.currentTime, 0.05);
-  musicGain.gain.setTargetAtTime(save.settings.music ? 0.16 : 0, ctx.currentTime, 0.05);
+  sfxGain.gain.setTargetAtTime(sfxLevel(), ctx.currentTime, 0.05);
+  musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.05);
 }
 
 export function suspendAudio() { if (ctx && ctx.state === 'running') ctx.suspend(); }
@@ -64,6 +67,14 @@ export const sfx = {
   click: () => tone(1500, 0.04, { type: 'square', vol: 0.08 }),
   buy: () => [880, 1109, 1319].forEach((f, i) => tone(f, 0.12, { type: 'triangle', vol: 0.3, delay: i * 0.07 })),
   star: (i) => tone(880 + i * 220, 0.2, { type: 'triangle', vol: 0.3 }),
+  boost: () => { tone(400, 0.25, { type: 'sawtooth', vol: 0.15, slide: 900 }); noise(0.2, { vol: 0.15, freq: 4000 }); },
+  pad: () => { tone(200, 0.35, { type: 'square', vol: 0.18, slide: 900 }); tone(500, 0.3, { type: 'sine', vol: 0.2, slide: 1200, delay: 0.05 }); },
+  crumble: () => noise(0.35, { vol: 0.3, freq: 700 }),
+  meteor: () => { noise(0.5, { vol: 0.5, freq: 500 }); tone(90, 0.5, { type: 'sawtooth', vol: 0.3, slide: -50 }); },
+  double: () => tone(520, 0.15, { type: 'triangle', vol: 0.3, slide: 600 }),
+  tick: () => tone(1800, 0.025, { type: 'square', vol: 0.06 }),
+  gift: () => [659, 784, 988, 1319, 1568].forEach((f, i) => tone(f, 0.18, { type: 'triangle', vol: 0.25, delay: i * 0.08 })),
+  error: () => tone(180, 0.18, { type: 'square', vol: 0.15 }),
 };
 
 // ---------- Background music: tiny step sequencer, one mood per theme ----------
@@ -74,6 +85,18 @@ const SONGS = {
     melody: [0, 1, 2, -1, 3, 2, 1, 0, 4, -1, 3, 2, 1, 2, 0, -1], bass: [0, 0, 3, 3, 4, 4, 0, 0] },
   ice: { bpm: 92, root: 64, scale: [0, 2, 3, 7, 9], wave: 'sine',
     melody: [4, -1, 3, 2, -1, 0, 1, -1, 2, 3, 4, -1, 3, 1, 0, -1], bass: [0, 0, 2, 2, 3, 3, 1, 1] },
+  candy: { bpm: 128, root: 67, scale: [0, 2, 4, 5, 7, 9, 11], wave: 'square',
+    melody: [0, 2, 4, 2, 4, 6, 4, -1, 5, 4, 2, 0, 1, 2, 0, -1], bass: [0, 0, 3, 3, 4, 4, 0, 0] },
+  ocean: { bpm: 84, root: 62, scale: [0, 2, 3, 5, 7, 9, 10], wave: 'sine',
+    melody: [0, -1, 2, 4, -1, 3, 2, -1, 4, -1, 6, 5, -1, 4, 2, -1], bass: [0, 0, 5, 5, 3, 3, 4, 4] },
+  volcano: { bpm: 132, root: 52, scale: [0, 1, 3, 5, 7, 8, 10], wave: 'sawtooth',
+    melody: [0, 0, 1, 0, 3, 2, 1, 0, 4, 4, 5, 4, 3, 1, 0, -1], bass: [0, 0, 0, 0, 5, 5, 3, 3] },
+  cherry: { bpm: 96, root: 69, scale: [0, 2, 3, 7, 8], wave: 'triangle',
+    melody: [0, 1, 2, -1, 4, 3, 2, -1, 1, 2, 3, 4, 2, -1, 0, -1], bass: [0, 0, 2, 2, 3, 3, 1, 1] },
+  forest: { bpm: 90, root: 57, scale: [0, 2, 3, 5, 7, 8, 11], wave: 'sine',
+    melody: [4, 2, 0, -1, 3, 1, -1, 2, 4, 5, 4, 2, 0, -1, 1, -1], bass: [0, 0, 3, 3, 5, 5, 4, 4] },
+  space: { bpm: 104, root: 60, scale: [0, 2, 4, 6, 7, 9, 11], wave: 'sine',
+    melody: [0, 4, 7, 4, 6, 4, 2, -1, 0, 4, 8, 7, 6, 4, 2, -1], bass: [0, 0, 4, 4, 5, 5, 3, 3] },
   city: { bpm: 124, root: 55, scale: [0, 3, 5, 7, 10], wave: 'square',
     melody: [0, 0, 2, 3, 4, 3, 2, 0, 1, 1, 3, 4, 5, 4, 3, 1], bass: [0, 0, 0, 0, 3, 3, 2, 2] },
 };

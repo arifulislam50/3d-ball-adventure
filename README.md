@@ -3,21 +3,21 @@
 A mobile 3D rolling-ball adventure built with **Three.js + Vite + Capacitor 8** (Android).
 
 ## Features
-- Ball rolls by itself: **drag left/right** to steer, **tap** (or swipe up) to jump. The classic joystick is still available in Settings.
-- Real falling off edges and gaps, with **3 lives**, checkpoints and **1–3 star** ratings
-- **24 levels**, every layout different: narrow bridges, gaps, zig-zags, ramps, moving platforms
-- Obstacles: sliding bumpers, spikes, swinging hammers, rolling boulders
-- Power-ups: ⚡ speed boost, 🛡️ shield, 🧲 coin magnet
-- 4 worlds, changing every 3 levels: Meadow → Desert → Ice → Neon City
-- Light trail, coin sparkles, jump dust, clouds, birds, waves, snow, stars
-- Synthesized sound effects + music for each world (on/off)
-- Ball shop with 8 skins bought with coins, level select, saved progress, vibration (on/off)
-- Android back button, auto-pause when the app is in the background, low graphics mode
+- Ball rolls by itself: **drag** to steer, **tap** / swipe up / button to jump (joystick mode in Settings)
+- **120 levels in 10 worlds** (Meadow, Desert, Ice, Neon City, Candy, Ocean, Volcano, Cherry, Magic Forest, Space); level 12 of each world is a **boss** level with meteors
+- **Endless mode** with best distance
+- Obstacles: bumpers, spikes, hammers, boulders, lasers, crumbling tiles, wind, meteors; jump pads and speed strips
+- Power-ups: speed, shield, magnet, double jump, slow-mo, ghost, x2 coins
+- 3 lives, checkpoints, 1-3 stars, best times, continue tickets
+- Shop: 33 balls (5 rare), worlds, 13 trails, eyes/hats/glasses, pets, upgrades, daily gift, lucky spin, mystery box, daily offer
+- Daily missions, 25 achievements, statistics
+- Full settings (sound volumes, vibration, controls, sensitivity, difficulty, graphics, FPS, camera, battery saver, big text…) and **English / বাংলা**
+- Synthesized music per world, haptics, Android back button, auto-pause
 
 ## Project layout
 | Path | What |
 | --- | --- |
-| `src/` | Game code (`main.js` game loop & UI, `levels.js` level generator, `world.js` 3D world, `audio.js`, `skins.js`, `effects.js`) |
+| `src/` | Game code: `main.js` (game loop & physics), `ui.js` (menus), `levels.js` (level generator), `world.js` (3D worlds), `catalog.js` (shop items), `progress.js` (missions, gifts), `i18n.js` (English/Bangla), `skins.js`, `effects.js`, `audio.js` |
 | `src/config.js` | **Game name, version, privacy URL** – change branding here |
 | `android/` | Native Android project (icons, splash, signing, version code) |
 | `assets/` | Source images for the app icon & splash |
