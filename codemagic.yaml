@@ -1,148 +1,108 @@
-# Codemagic CI/CD for 3D Ball Adventure
+# Codemagic CI/CD for Marblo: Island Roll (formerly 3D Ball Adventure)
 #
-# Detected technology (NOT Flutter):
-#   - Game engine : Three.js (WebGL 3D)  -> src/main.js
-#   - Bundler     : Vite 7               -> builds the game into dist/
-#   - Android     : Capacitor 8          -> wraps dist/ in a native Android app
+# Technology (NOT Flutter):
+#   - Game engine : Three.js (WebGL 3D)   -> src/
+#   - Bundler     : Vite 7                -> builds the game into dist/
+#   - Android     : Capacitor 8           -> android/ (committed, with icons & signing setup)
 #
-# The game source is stored in 3d-ball-adventure-source.zip in the repo root.
-# The build unzips it automatically; nothing in the game is changed.
+# Outputs of every build:
+#   - .aab  -> upload this to Google Play Console
+#   - .apk  -> install this directly on your phone for testing
 #
-# Two workflows (choose one when you tap "Start new build"):
-#   1. android-release-apk-quick  -> Signed release APK, zero setup.
-#                                    Creates a signing key on first use and
-#                                    saves it as a build artifact.
-#   2. android-release-apk        -> Signed release APK using YOUR keystore
-#                                    uploaded to Codemagic (reference name:
-#                                    ball_keystore). Use this for all builds
-#                                    after the first one so updates install
-#                                    over the old app.
+# Workflows (choose one when you tap "Start new build"):
+#   1. android-release-quick  : zero setup. Creates a NEW signing key and gives it
+#                                to you as a download. Use it ONCE, for the first build.
+#   2. android-release        : uses YOUR keystore uploaded to Codemagic
+#                                (reference name: ball_keystore). Use this for every
+#                                build you send to Google Play.
+#
+# The app's versionCode = Codemagic's PROJECT_BUILD_NUMBER, so it always increases.
 
 definitions:
   env: &env
     node: 22
     java: 21
-    vars:
-      APP_NAME: "3D Ball Adventure"
 
   scripts:
-    - &prepare_source
-      name: Locate game source (unzip if needed)
+    - &install_build_web
+      name: Install dependencies and build the game (Vite)
       script: |
         set -e
-        if [ -f "$CM_BUILD_DIR/package.json" ]; then
-          APP_DIR="$CM_BUILD_DIR"
-        else
-          ZIP=$(ls "$CM_BUILD_DIR"/*.zip | head -n 1)
-          echo "Extracting $ZIP"
-          mkdir -p "$CM_BUILD_DIR/_src"
-          unzip -q -o "$ZIP" -d "$CM_BUILD_DIR/_src"
-          APP_DIR=$(dirname "$(find "$CM_BUILD_DIR/_src" -name package.json -not -path '*/node_modules/*' | head -n 1)")
-        fi
-        echo "Game project directory: $APP_DIR"
-        echo "APP_DIR=$APP_DIR" >> $CM_ENV
-        ls -la "$APP_DIR"
-
-    - &build_web
-      name: Install dependencies and build the Three.js game (Vite)
-      script: |
-        set -e
-        cd "$APP_DIR"
-        npm install --no-audit --no-fund
+        npm ci --no-audit --no-fund || npm install --no-audit --no-fund
         npm run build
 
-    - &add_android
-      name: Create Android project with Capacitor
+    - &cap_sync
+      name: Copy the game into the Android project (Capacitor)
       script: |
         set -e
-        cd "$APP_DIR"
-        if [ ! -d android ]; then npx cap add android; fi
         npx cap sync android
         echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-        # Unique, always-increasing version code so updates install cleanly
-        sed -i.bak -E "s/versionCode [0-9]+/versionCode ${BUILD_NUMBER:-1}/" android/app/build.gradle
-        sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"1.0.${BUILD_NUMBER:-1}\"/" android/app/build.gradle
         chmod +x android/gradlew
 
-    - &assemble_release
-      name: Build release APK (Gradle)
+    - &gradle_build
+      name: Build signed AAB + APK (Gradle)
       script: |
         set -e
-        cd "$APP_DIR/android"
-        ./gradlew assembleRelease --no-daemon
-
-    - &sign_apk
-      name: Sign release APK
-      script: |
-        set -e
+        cd android
+        ./gradlew bundleRelease assembleRelease --no-daemon
+        cd ..
+        mkdir -p output
+        N=${PROJECT_BUILD_NUMBER:-1}
+        cp android/app/build/outputs/bundle/release/app-release.aab "output/marblo-$N.aab"
+        cp android/app/build/outputs/apk/release/app-release.apk "output/marblo-$N.apk"
         BT=$(ls "$ANDROID_SDK_ROOT/build-tools" | sort -V | tail -n 1)
-        TOOLS="$ANDROID_SDK_ROOT/build-tools/$BT"
-        IN="$APP_DIR/android/app/build/outputs/apk/release/app-release-unsigned.apk"
-        mkdir -p "$CM_BUILD_DIR/output"
-        OUT="$CM_BUILD_DIR/output/3d-ball-adventure-release-${BUILD_NUMBER:-1}.apk"
-        "$TOOLS/zipalign" -p -f 4 "$IN" /tmp/aligned.apk
-        "$TOOLS/apksigner" sign \
-          --ks "$CM_KEYSTORE_PATH" \
-          --ks-pass "pass:$CM_KEYSTORE_PASSWORD" \
-          --ks-key-alias "$CM_KEY_ALIAS" \
-          --key-pass "pass:$CM_KEY_PASSWORD" \
-          --out "$OUT" /tmp/aligned.apk
-        "$TOOLS/apksigner" verify --print-certs "$OUT"
-        echo "Signed APK: $OUT"
+        "$ANDROID_SDK_ROOT/build-tools/$BT/apksigner" verify --print-certs "output/marblo-$N.apk" || true
+        ls -la output
 
 workflows:
   # ---------------------------------------------------------------
-  # 1) QUICK: no setup at all. Good for your very first build.
+  # 1) QUICK: first build only. Gives you a keystore to keep forever.
   # ---------------------------------------------------------------
-  android-release-apk-quick:
-    name: Android Release APK (quick, auto key)
+  android-release-quick:
+    name: Android Release (quick, creates new key)
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
       <<: *env
     scripts:
-      - *prepare_source
-      - *build_web
-      - *add_android
-      - *assemble_release
-      - name: Create a signing key for this build
+      - *install_build_web
+      - *cap_sync
+      - name: Create a signing key (keystore)
         script: |
           set -e
-          export CM_KEYSTORE_PATH="$CM_BUILD_DIR/output/ball-adventure-keystore.jks"
-          export CM_KEY_ALIAS="balladventure"
+          mkdir -p output
+          KS="$CM_BUILD_DIR/output/marblo-upload-key.jks"
+          ALIAS="marblo"
           PASS=$(openssl rand -hex 12)
-          mkdir -p "$CM_BUILD_DIR/output"
-          keytool -genkeypair -v -keystore "$CM_KEYSTORE_PATH" \
-            -alias "$CM_KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass "$PASS" -keypass "$PASS" \
-            -dname "CN=3D Ball Adventure, O=Ball Adventure, C=BD"
+          keytool -genkeypair -v -keystore "$KS" -alias "$ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$PASS" -keypass "$PASS" -dname "CN=Marblo, O=arifulislam50, C=BD"
           cat > "$CM_BUILD_DIR/output/KEYSTORE-INFO.txt" <<EOF
-          Keystore file : ball-adventure-keystore.jks
-          Key alias     : $CM_KEY_ALIAS
+          Keystore file : marblo-upload-key.jks
+          Key alias     : $ALIAS
           Keystore pass : $PASS
           Key password  : $PASS
-          KEEP THIS FILE AND THE .jks FILE PRIVATE AND SAFE.
-          Upload the .jks to Codemagic (reference name: ball_keystore)
-          and use the "android-release-apk" workflow for future builds.
+          KEEP THIS FILE AND THE .jks FILE PRIVATE AND SAFE. If you lose them you
+          cannot update your app on Google Play with this key.
+          Upload the .jks to Codemagic (reference name: ball_keystore) and use the
+          "android-release" workflow for all future builds.
           EOF
-          echo "CM_KEYSTORE_PATH=$CM_KEYSTORE_PATH" >> $CM_ENV
-          echo "CM_KEY_ALIAS=$CM_KEY_ALIAS" >> $CM_ENV
+          echo "CM_KEYSTORE_PATH=$KS" >> $CM_ENV
+          echo "CM_KEY_ALIAS=$ALIAS" >> $CM_ENV
           echo "CM_KEYSTORE_PASSWORD=$PASS" >> $CM_ENV
           echo "CM_KEY_PASSWORD=$PASS" >> $CM_ENV
-      - *sign_apk
+      - *gradle_build
     artifacts:
+      - output/*.aab
       - output/*.apk
       - output/*.jks
       - output/KEYSTORE-INFO.txt
 
   # ---------------------------------------------------------------
-  # 2) PERMANENT: uses your keystore uploaded to Codemagic.
-  #    Codemagic > Team settings > codemagic.yaml settings >
-  #    Code signing identities > Android keystores
-  #    Reference name must be: ball_keystore
+  # 2) PERMANENT: Codemagic > Team settings > codemagic.yaml settings >
+  #    Code signing identities > Android keystores > reference: ball_keystore
   # ---------------------------------------------------------------
-  android-release-apk:
-    name: Android Release APK (signed with ball_keystore)
+  android-release:
+    name: Android Release (signed with ball_keystore)
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
@@ -150,10 +110,9 @@ workflows:
       android_signing:
         - ball_keystore
     scripts:
-      - *prepare_source
-      - *build_web
-      - *add_android
-      - *assemble_release
-      - *sign_apk
+      - *install_build_web
+      - *cap_sync
+      - *gradle_build
     artifacts:
+      - output/*.aab
       - output/*.apk

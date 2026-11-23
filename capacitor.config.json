@@ -1,0 +1,8 @@
+{
+  "appId": "com.arifulislam50.marblo",
+  "appName": "Marblo",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#2a7fe0"
+  }
+}

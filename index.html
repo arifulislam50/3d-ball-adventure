@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#2a7fe0" />
+  <title>Marblo: Island Roll</title>
+</head>
+<body>
+  <div id="app">
+    <!-- In-game HUD -->
+    <div id="hud" class="hidden">
+      <div class="hud-row">
+        <button id="pauseBtn" class="icon-btn" aria-label="Pause">Ⅱ</button>
+        <div class="hud-pill">LV <span id="level">1</span></div>
+        <div class="hud-pill"><span class="coin-ico"></span><span id="score">0</span></div>
+        <div id="lives" class="hud-pill lives"></div>
+      </div>
+      <div id="progress"><div id="progressFill"></div></div>
+      <div id="powers"></div>
+    </div>
+    <div id="message" class="hidden"></div>
+
+    <!-- Main menu -->
+    <div id="menu" class="panel">
+      <div class="menu-ball"></div>
+      <div class="logo"><span id="gameName">MARBLO</span><small id="gameSub">ISLAND ROLL</small></div>
+      <div class="wallet"><span class="coin-ico"></span><span id="walletMenu">0</span></div>
+      <button id="playBtn" class="main-btn">PLAY</button>
+      <div class="menu-grid">
+        <button id="levelsBtn" class="secondary-btn">🗺️ LEVELS</button>
+        <button id="shopBtn" class="secondary-btn">🛒 SHOP</button>
+        <button id="settingsBtn" class="secondary-btn wide">⚙️ SETTINGS</button>
+      </div>
+      <div class="menu-foot" id="menuFoot">3D OFFLINE GAME</div>
+    </div>
+
+    <!-- Level select -->
+    <div id="levelsPanel" class="panel hidden">
+      <h1>LEVELS</h1>
+      <div id="levelGrid"></div>
+      <button class="secondary-btn back-btn" data-back>◀ BACK</button>
+    </div>
+
+    <!-- Shop -->
+    <div id="shopPanel" class="panel hidden">
+      <h1>BALL SHOP</h1>
+      <div class="wallet"><span class="coin-ico"></span><span id="walletShop">0</span></div>
+      <div id="shopGrid"></div>
+      <button class="secondary-btn back-btn" data-back>◀ BACK</button>
+    </div>
+
+    <!-- Settings -->
+    <div id="settingsPanel" class="panel hidden">
+      <h1>SETTINGS</h1>
+      <div class="setting"><span>🎵 Music</span><button class="toggle" data-set="music"></button></div>
+      <div class="setting"><span>🔊 Sound effects</span><button class="toggle" data-set="sfx"></button></div>
+      <div class="setting"><span>📳 Vibration</span><button class="toggle" data-set="vibe"></button></div>
+      <div class="setting"><span>🎮 Controls</span><button class="choice" data-choice="control"></button></div>
+      <div class="setting"><span>✨ Graphics</span><button class="choice" data-choice="quality"></button></div>
+      <a id="privacyLink" class="privacy" target="_blank" rel="noopener">Privacy policy</a>
+      <button class="secondary-btn back-btn" data-back>◀ BACK</button>
+    </div>
+
+    <!-- Pause -->
+    <div id="pausePanel" class="panel hidden">
+      <h1>PAUSED</h1>
+      <button id="resumeBtn" class="main-btn">RESUME</button>
+      <button id="restartBtn" class="secondary-btn">RESTART LEVEL</button>
+      <button id="homeBtn" class="secondary-btn">MAIN MENU</button>
+    </div>
+
+    <!-- Level complete -->
+    <div id="completePanel" class="panel hidden">
+      <div class="trophy">🏆</div>
+      <h1>LEVEL COMPLETE!</h1>
+      <div id="starRow" class="stars"><span>★</span><span>★</span><span>★</span></div>
+      <p id="completeText">Great rolling!</p>
+      <button id="nextBtn" class="main-btn">NEXT LEVEL</button>
+      <button id="replayBtn" class="secondary-btn">PLAY AGAIN</button>
+      <button id="menuBtn" class="secondary-btn">MAIN MENU</button>
+    </div>
+
+    <!-- Game over -->
+    <div id="gameoverPanel" class="panel hidden">
+      <div class="trophy">💥</div>
+      <h1>OUT OF LIVES</h1>
+      <p id="gameoverText">Don't give up!</p>
+      <button id="retryBtn" class="main-btn">TRY AGAIN</button>
+      <button id="goMenuBtn" class="secondary-btn">MAIN MENU</button>
+    </div>
+
+    <!-- First-time tutorial -->
+    <div id="tutorial" class="hidden">
+      <div class="tut-hand">👆</div>
+      <p><b>Drag left / right</b> to steer<br><b>Tap</b> to jump</p>
+      <small>Tap to start</small>
+    </div>
+
+    <!-- Joystick mode controls -->
+    <div id="controls" class="hidden">
+      <div id="joystick"><div id="stick"></div></div>
+      <button id="jumpBtn">JUMP</button>
+    </div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

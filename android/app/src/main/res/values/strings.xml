@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Marblo</string>
+    <string name="title_activity_main">Marblo</string>
+    <string name="package_name">com.arifulislam50.marblo</string>
+    <string name="custom_url_scheme">com.arifulislam50.marblo</string>
+</resources>

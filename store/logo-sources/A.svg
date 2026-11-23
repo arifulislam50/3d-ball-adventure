@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<defs>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fd0ff"/><stop offset="1" stop-color="#2a7fe0"/></linearGradient>
+<radialGradient id="ball" cx="0.36" cy="0.32" r="0.75"><stop offset="0" stop-color="#fff2b0"/><stop offset="0.25" stop-color="#ffc23a"/><stop offset="0.75" stop-color="#ff8a12"/><stop offset="1" stop-color="#c85a00"/></radialGradient>
+<linearGradient id="grass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7ee37a"/><stop offset="1" stop-color="#3fae55"/></linearGradient>
+<linearGradient id="dirt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a8683a"/><stop offset="1" stop-color="#6d3f20"/></linearGradient>
+</defs>
+<rect width="1024" height="1024" fill="url(#sky)"/>
+<g fill="#ffffff" opacity="0.85"><ellipse cx="230" cy="250" rx="110" ry="42"/><ellipse cx="300" cy="225" rx="80" ry="50"/><ellipse cx="800" cy="190" rx="90" ry="34"/><ellipse cx="850" cy="170" rx="60" ry="38"/></g>
+<path d="M120 760 Q512 650 904 760 L860 840 Q512 1000 164 840 Z" fill="url(#dirt)"/>
+<path d="M110 760 Q512 640 914 760 Q512 830 110 760 Z" fill="url(#grass)"/>
+<g stroke="#ffffff" stroke-width="26" stroke-linecap="round" opacity="0.9"><line x1="150" y1="470" x2="290" y2="470"/><line x1="190" y1="560" x2="300" y2="560"/><line x1="170" y1="380" x2="270" y2="380"/></g>
+<ellipse cx="540" cy="735" rx="200" ry="34" fill="#000" opacity="0.18"/>
+<circle cx="540" cy="500" r="235" fill="url(#ball)"/>
+<ellipse cx="540" cy="500" rx="235" ry="70" fill="none" stroke="#ffffff" stroke-width="34" transform="rotate(-28 540 500)"/>
+<ellipse cx="460" cy="400" rx="70" ry="42" fill="#fff" opacity="0.7" transform="rotate(-35 460 400)"/>
+<g fill="#ffe34a" stroke="#e0a800" stroke-width="8"><path d="M820 420 l18 38 42 6 -30 29 7 42 -37 -20 -37 20 7 -42 -30 -29 42 -6z"/></g>
+</svg>
