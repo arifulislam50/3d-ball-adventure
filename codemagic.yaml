@@ -5,9 +5,10 @@
 #   - Bundler     : Vite 7                -> builds the game into dist/
 #   - Android     : Capacitor 8           -> android/ (committed, with icons & signing setup)
 #
-# Outputs of every build:
-#   - .aab  -> upload this to Google Play Console
-#   - .apk  -> install this directly on your phone for testing
+# Output of every build:
+#   - .apk  -> install this directly on your phone
+#   (For Google Play later: change "assembleRelease" to "bundleRelease assembleRelease"
+#    and add the .aab copy line + "- output/*.aab" artifact back.)
 #
 # Workflows (choose one when you tap "Start new build"):
 #   1. android-release-quick  : zero setup. Creates a NEW signing key and gives it
@@ -40,15 +41,14 @@ definitions:
         chmod +x android/gradlew
 
     - &gradle_build
-      name: Build signed AAB + APK (Gradle)
+      name: Build signed release APK (Gradle)
       script: |
         set -e
         cd android
-        ./gradlew bundleRelease assembleRelease --no-daemon
+        ./gradlew assembleRelease --no-daemon
         cd ..
         mkdir -p output
         N=${PROJECT_BUILD_NUMBER:-1}
-        cp android/app/build/outputs/bundle/release/app-release.aab "output/marblo-$N.aab"
         cp android/app/build/outputs/apk/release/app-release.apk "output/marblo-$N.apk"
         BT=$(ls "$ANDROID_SDK_ROOT/build-tools" | sort -V | tail -n 1)
         "$ANDROID_SDK_ROOT/build-tools/$BT/apksigner" verify --print-certs "output/marblo-$N.apk" || true
@@ -92,7 +92,6 @@ workflows:
           echo "CM_KEY_PASSWORD=$PASS" >> $CM_ENV
       - *gradle_build
     artifacts:
-      - output/*.aab
       - output/*.apk
       - output/*.jks
       - output/KEYSTORE-INFO.txt
@@ -114,5 +113,4 @@ workflows:
       - *cap_sync
       - *gradle_build
     artifacts:
-      - output/*.aab
       - output/*.apk
