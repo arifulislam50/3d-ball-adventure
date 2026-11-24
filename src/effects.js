@@ -99,6 +99,12 @@ export class Trail {
       case 'ice': return c.setRGB(0.75 - f * 0.5, 0.95 - f * 0.2, 1);
       case 'gold': return c.setRGB(1, 0.82 - f * 0.25, 0.25);
       case 'neon': return c.setHSL(0.5 + Math.sin(t * 4 + f * 6) * 0.08, 1, 0.55);
+      case 'ocean': return c.setRGB(0.1, 0.6 + f * 0.2, 1 - f * 0.3);
+      case 'toxic': return c.setRGB(0.5 - f * 0.4, 1, 0.1);
+      case 'sunset': return c.setRGB(1, 0.55 - f * 0.3, 0.3 + f * 0.4);
+      case 'candy': return (Math.floor(i / 3) % 2) ? c.setRGB(1, 1, 1) : c.setRGB(1, 0.3, 0.6);
+      case 'bd': return (i % 6 < 2) ? c.setRGB(0.95, 0.15, 0.25) : c.setRGB(0, 0.65, 0.32);
+      case 'galaxy': return c.setHSL(0.72 + Math.sin(t * 2 + f * 5) * 0.08, 0.9, 0.55);
       default: return c.copy(this.color);
     }
   }

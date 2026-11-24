@@ -8,8 +8,8 @@ import { generateLevel, segAt, endlessGen, nextChunk } from './levels.js';
 import { buildEnvironment, buildTrack, THEMES } from './world.js';
 import { Particles, Trail, SPRITE, emojiTexture } from './effects.js';
 import { makeSkinMaterial, hasRing } from './skins.js';
-import { ballById, trailById, styleById, petById, powerTime, magnetRadius, coinMult, grantRares } from './catalog.js';
-import { track } from './progress.js';
+import { ballById, trailById, styleById, petById, powerTime, magnetRadius, coinMult, grantRares, comboWindow } from './catalog.js';
+import { track, addXP } from './progress.js';
 import * as UI from './ui.js';
 import { t } from './i18n.js';
 
@@ -50,7 +50,9 @@ const extras = new THREE.Group(); scene.add(extras); // eyes / hat / face: follo
 const eyeSprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); eyeSprite.scale.set(0.78, 0.39, 1); eyeSprite.position.set(0, 0.06, 0.52);
 const faceSprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); faceSprite.scale.set(0.8, 0.4, 1); faceSprite.position.set(0, 0.02, 0.56);
 const hatSprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); hatSprite.scale.set(0.62, 0.62, 1); hatSprite.position.set(0, R + 0.2, 0.05);
-extras.add(eyeSprite, faceSprite, hatSprite);
+const backSprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); backSprite.scale.set(1.5, 0.75, 1); backSprite.position.set(0, 0.1, -0.1);
+extras.add(eyeSprite, faceSprite, hatSprite, backSprite);
+const aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: SPRITE, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); aura.scale.set(2.1, 2.1, 1); scene.add(aura);
 const pet = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); pet.scale.set(0.75, 0.75, 1); scene.add(pet);
 const sparks = new Particles(scene, { max: 600 });
 let emojiPS = null;
@@ -61,9 +63,7 @@ const accCache = new Map();
 function accTexture(id) {
   if (accCache.has(id)) return accCache.get(id);
   const item = styleById(id);
-  if (id === 'hat_horns' || item?.slot === 'hat') {
-    if (id !== 'hat_horns') { const tx = emojiTexture(item.icon, 128); accCache.set(id, tx); return tx; }
-  }
+  if (item?.emojiHat) { const tx = emojiTexture(item.icon, 128); accCache.set(id, tx); return tx; }
   const c = document.createElement('canvas'); c.width = 256; c.height = 128; const g = c.getContext('2d');
   const eye = (x, fn) => { g.save(); g.translate(x, 64); fn(); g.restore(); };
   if (id === 'eyes_cute' || id === 'eyes_angry') {
@@ -85,10 +85,45 @@ function accTexture(id) {
     g.strokeStyle = '#2a2a2a'; g.lineWidth = 9; [76, 180].forEach((x) => { g.beginPath(); g.arc(x, 60, 38, 0, 7); g.stroke(); }); g.beginPath(); g.moveTo(114, 56); g.lineTo(142, 56); g.stroke();
   } else if (id === 'face_stache') {
     g.fillStyle = '#3a2416'; g.beginPath(); g.moveTo(128, 70); g.bezierCurveTo(100, 60, 60, 66, 40, 96); g.bezierCurveTo(80, 92, 110, 100, 128, 84); g.bezierCurveTo(146, 100, 176, 92, 216, 96); g.bezierCurveTo(196, 66, 156, 60, 128, 70); g.fill();
+  } else if (id === 'eyes_heart') {
+    [80, 176].forEach((x) => eye(x, () => { g.fillStyle = '#ff3a6a'; g.beginPath(); g.moveTo(0, 30); g.bezierCurveTo(-46, -4, -26, -44, 0, -18); g.bezierCurveTo(26, -44, 46, -4, 0, 30); g.fill(); }));
+  } else if (id === 'eyes_wink') {
+    eye(80, () => { g.fillStyle = '#fff'; g.beginPath(); g.ellipse(0, 0, 34, 42, 0, 0, 7); g.fill(); g.lineWidth = 4; g.strokeStyle = '#222'; g.stroke(); g.fillStyle = '#1b1b2f'; g.beginPath(); g.ellipse(4, 10, 19, 23, 0, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(10, 2, 7, 0, 7); g.fill(); });
+    eye(176, () => { g.lineWidth = 9; g.strokeStyle = '#1b1b2f'; g.lineCap = 'round'; g.beginPath(); g.moveTo(-28, -4); g.lineTo(24, 6); g.lineTo(-24, 18); g.stroke(); });
+  } else if (id === 'eyes_cool') {
+    [80, 176].forEach((x, i) => eye(x, () => { g.fillStyle = '#fff'; g.beginPath(); g.ellipse(0, 6, 34, 26, 0, 0, 7); g.fill(); g.fillStyle = '#1b1b2f'; g.beginPath(); g.arc(i ? -8 : 8, 10, 15, 0, 7); g.fill(); g.fillStyle = '#1b1b2f'; g.fillRect(-38, -26, 76, 12); }));
+  } else if (id === 'eyes_robot') {
+    g.fillStyle = '#1a1a2a'; g.beginPath(); g.roundRect(24, 34, 208, 60, 30); g.fill(); g.fillStyle = '#ff2a3a'; g.shadowColor = '#ff2a3a'; g.shadowBlur = 18; g.fillRect(56, 56, 144, 16);
+  } else if (id === 'eyes_laser') {
+    [80, 176].forEach((x) => eye(x, () => { g.fillStyle = '#fff'; g.beginPath(); g.ellipse(0, 0, 32, 38, 0, 0, 7); g.fill(); g.shadowColor = '#ff0000'; g.shadowBlur = 24; g.fillStyle = '#ff1a1a'; g.beginPath(); g.arc(0, 6, 18, 0, 7); g.fill(); g.shadowBlur = 0; }));
+  } else if (id === 'face_blush') {
+    g.fillStyle = 'rgba(255,110,150,.75)'; [44, 212].forEach((x) => { g.beginPath(); g.ellipse(x, 70, 30, 18, 0, 0, 7); g.fill(); });
+  } else if (id === 'face_monocle') {
+    g.strokeStyle = '#c8a000'; g.lineWidth = 8; g.beginPath(); g.arc(176, 60, 40, 0, 7); g.stroke(); g.fillStyle = 'rgba(200,240,255,.35)'; g.fill(); g.beginPath(); g.moveTo(206, 90); g.quadraticCurveTo(230, 120, 220, 128); g.stroke();
+  } else if (id === 'face_beard') {
+    g.fillStyle = '#6a4022'; g.beginPath(); g.moveTo(30, 20); g.quadraticCurveTo(128, 70, 226, 20); g.quadraticCurveTo(230, 128, 128, 128); g.quadraticCurveTo(26, 128, 30, 20); g.fill();
+  } else if (id === 'hat_halo') {
+    g.strokeStyle = '#ffe35b'; g.lineWidth = 14; g.shadowColor = '#fff6a0'; g.shadowBlur = 20; g.beginPath(); g.ellipse(128, 70, 90, 26, 0, 0, 7); g.stroke();
+  } else if (id === 'hat_diamond') {
+    g.fillStyle = '#ffd23a'; g.beginPath(); g.moveTo(30, 120); g.lineTo(30, 50); g.lineTo(80, 85); g.lineTo(128, 20); g.lineTo(176, 85); g.lineTo(226, 50); g.lineTo(226, 120); g.fill();
+    [[80, 98, '#5ad1ff'], [128, 70, '#c8f6ff'], [176, 98, '#ff5a8a']].forEach(([x, y, c]) => { g.fillStyle = c; g.beginPath(); g.moveTo(x, y - 18); g.lineTo(x + 14, y); g.lineTo(x, y + 18); g.lineTo(x - 14, y); g.fill(); });
+  } else if (id === 'back_wings') {
+    [[-1, 60], [1, 196]].forEach(([s2, x]) => { g.fillStyle = '#ffffff'; g.strokeStyle = '#b8d8ff'; g.lineWidth = 4; for (let k = 0; k < 3; k++) { g.beginPath(); g.ellipse(x + s2 * k * 10, 50 + k * 18, 56 - k * 10, 22, s2 * -0.4, 0, 7); g.fill(); g.stroke(); } });
+  } else if (id === 'back_cape') {
+    g.fillStyle = '#d4142a'; g.beginPath(); g.moveTo(60, 0); g.lineTo(196, 0); g.quadraticCurveTo(230, 70, 210, 128); g.lineTo(46, 128); g.quadraticCurveTo(26, 70, 60, 0); g.fill(); g.fillStyle = '#ffd23a'; g.fillRect(60, 0, 136, 10);
+  } else if (id === 'back_jet') {
+    g.fillStyle = '#8a96aa'; g.beginPath(); g.roundRect(62, 10, 52, 90, 20); g.fill(); g.beginPath(); g.roundRect(142, 10, 52, 90, 20); g.fill();
+    g.fillStyle = '#ff8a1a'; [88, 168].forEach((x) => { g.beginPath(); g.moveTo(x - 18, 100); g.lineTo(x, 128); g.lineTo(x + 18, 100); g.fill(); });
   } else if (id === 'hat_horns') {
     g.fillStyle = '#d4142a'; [[70, -1], [186, 1]].forEach(([x, s]) => { g.beginPath(); g.moveTo(x - 30, 120); g.quadraticCurveTo(x - s * 10, 50, x + s * 30, 6); g.quadraticCurveTo(x + s * 10, 70, x + 30, 120); g.fill(); });
   }
   const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; accCache.set(id, tx); return tx;
+}
+
+// Back items sit behind the ball (the face looks at the camera) and stick out around it.
+function placeBack(spr, id) {
+  const P = { back_wings: [1.75, 0.88, 0.15], back_cape: [1.35, 1.35, -0.2], back_jet: [1.45, 1.1, -0.15] }[id] || [1.4, 1, 0];
+  spr.scale.set(P[0], P[1], 1); spr.position.set(0, P[2], -0.2);
 }
 
 function applyLook() {
@@ -103,9 +138,12 @@ function applyLook() {
   const e = save.equip;
   eyeSprite.visible = !!e.eyes; if (e.eyes) eyeSprite.material.map = accTexture(e.eyes);
   faceSprite.visible = !!e.face; if (e.face) faceSprite.material.map = accTexture(e.face);
-  hatSprite.visible = !!e.hat; if (e.hat) { hatSprite.material.map = accTexture(e.hat); hatSprite.scale.set(e.hat === 'hat_horns' ? 0.8 : 0.62, e.hat === 'hat_horns' ? 0.4 : 0.62, 1); hatSprite.position.y = e.hat === 'hat_horns' ? R + 0.08 : R + 0.2; }
+  hatSprite.visible = !!e.hat; if (e.hat) { hatSprite.material.map = accTexture(e.hat); const flat = !styleById(e.hat)?.emojiHat; hatSprite.scale.set(flat ? 0.8 : 0.62, flat ? 0.4 : 0.62, 1); hatSprite.position.y = flat ? R + 0.08 : R + 0.2; }
   [eyeSprite, faceSprite, hatSprite].forEach((s) => (s.material.needsUpdate = true));
-  pet.visible = !!e.pet; if (e.pet) { pet.material.map = emojiTexture(petById(e.pet).icon, 128); pet.material.needsUpdate = true; }
+  pet.visible = !!e.pet; if (e.pet) { pet.material.map = emojiTexture(petById(e.pet).icon, 128); pet.material.needsUpdate = true; const big = petById(e.pet).price >= 3000; pet.scale.setScalar(big ? 0.95 : 0.75); }
+  backSprite.visible = !!e.back; if (e.back) { backSprite.material.map = accTexture(e.back); backSprite.material.needsUpdate = true;
+    placeBack(backSprite, e.back); }
+  const bi = ballById(e.ball); aura.visible = !!bi.legendary; aura.material.color.setHex(bi.trail);
   setParticleScale();
 }
 
@@ -117,9 +155,10 @@ const S = {
   checkpoint: new THREE.Vector3(), lastSafe: new THREE.Vector3(), invuln: 0,
   power: { speed: 0, shield: 0, magnet: 0, double: 0, slow: 0, ghost: 0, x2: 0 },
   time: 0, wt: 0, deadTimer: 0, deathReason: '', startZ: 6, hudTimer: 0, speedNow: 7, gravity: BASE_G,
-  introT: 0, shake: 0, continues: 0, meteorT: 2, trailT: 0, distance: 0,
+  introT: 0, shake: 0, continues: 0, meteorT: 2, trailT: 0, distance: 0, combo: 0, lastCoinT: -9, bestCombo: 0, cullT: 0, hints: {}, gateMult: 1,
 };
 const meteors = [];
+const FAILS = {}; // failures per level this session (help after 3)
 const joy = { x: 0, y: 0 }, keys = { left: false, right: false };
 const clock = new THREE.Clock();
 let elapsed = 0, sparkleTimer = 0;
@@ -161,20 +200,24 @@ function resetRunState() {
   const dm = diffMods();
   S.maxLives = S.endless ? 1 : Math.max(1, 3 + (save.upgrades.lives || 0) + dm.lives);
   S.lives = S.maxLives; S.lostLives = 0; S.coinsF = 0; S.invuln = 0; S.time = 0; S.wt = 0; S.continues = 0; S.distance = 0;
-  S.power = { speed: 0, shield: 0, magnet: 0, double: 0, slow: 0, ghost: 0, x2: 0 };
-  S.meteorT = 2.5; sparks.clear();
+  S.power = { speed: 0, shield: 0, magnet: 0, double: 0, slow: 0, ghost: 0, x2: 0, star: 0, fly: 0 };
+  S.meteorT = 2.5; sparks.clear(); S.combo = 0; S.bestCombo = 0; S.hints = {};
+  if (save.upgrades.freeShield) S.power.shield = powerTime('shield');
   if (save.items.startShield > 0) { save.items.startShield--; S.power.shield = powerTime('shield'); persist(); }
 }
 
 export function startLevel(worldId, lvl) {
   initAudio();
   lvl = Math.max(1, Math.min(LEVELS_PER_WORLD, lvl));
-  save.lastWorld = worldId; persist();
+  save.lastWorld = worldId; save.worldPlays[worldId] = (save.worldPlays[worldId] || 0) + 1; persist();
   loadLevelWorld(worldId, lvl);
   resetRunState();
   S.coinTotal = S.level.coins.length + 5 * S.level.gems.length;
+  const key = `${worldId}:${lvl}`;
+  if (save.chests[key]) S.contents[0].chests.forEach((c) => { c.taken = true; c.mesh.visible = false; });
   UI.hudStart({ endless: false, lvl, boss: S.level.boss, lives: S.lives, max: S.maxLives });
-  playMusic(worldId);
+  playMusic(worldId, S.level.boss);
+  if ((FAILS[key] || 0) >= 3) { S.power.shield = Math.max(S.power.shield, powerTime('shield')); FAILS[key] = 0; setTimeout(() => UI.message(t('helpShield'), 2000), 1900); }
   if (!save.tutorialDone && save.settings.control === 'drag') { S.mode = 'tutorial'; UI.showTutorial(true); }
   else beginIntro();
 }
@@ -242,7 +285,7 @@ export function jump() {
 }
 
 function hurt() {
-  if (S.invuln > 0 || S.power.ghost > 0) return;
+  if (S.invuln > 0 || S.power.ghost > 0 || S.power.star > 0) return;
   if (S.power.shield > 0) {
     S.power.shield = 0; S.invuln = 1.2; sfx.shieldBreak(); vibrate('medium');
     sparks.emit(ball.position, 0x5ad1ff, 30, 5, 0.7, 2); UI.message(t('shieldSaved'));
@@ -275,16 +318,22 @@ function respawn() {
 }
 
 function coinsEarned() { return Math.floor(S.coinsF); }
+function xpGain(n) {
+  const ups = addXP(n);
+  if (ups.length) { sfx.gift(); setTimeout(() => UI.message(t('levelUp', { n: ups[ups.length - 1] }), 1800), 600); }
+}
 
 function runOver() {
   S.mode = 'gameover'; sfx.lose();
   UI.hudHide();
   if (S.endless) {
     const dist = Math.floor(S.distance), best = save.stats.endlessBest, isBest = dist > best;
-    save.stats.endlessBest = Math.max(best, dist); track('endless', dist);
+    save.stats.bestCombo = Math.max(save.stats.bestCombo || 0, S.bestCombo); track('combo', S.bestCombo);
+    save.stats.endlessBest = Math.max(best, dist); track('endless', dist); xpGain(Math.floor(dist / 10));
     save.coins += coinsEarned(); S.coinsF = 0; const rares = grantRares(); persist();
     UI.showGameOver({ endless: true, dist, best: save.stats.endlessBest, isBest, coins: coinsEarned(), continues: S.continues, rares });
   } else {
+    const key = `${S.worldId}:${S.lvl}`; FAILS[key] = (FAILS[key] || 0) + 1;
     save.coins += coinsEarned(); const c = coinsEarned(); S.coinsF = 0; persist();
     UI.showGameOver({ endless: false, coins: c, continues: S.continues });
   }
@@ -318,7 +367,9 @@ function completeLevel() {
   const L = S.level, earned = coinsEarned();
   const ratio = S.coinTotal ? earned / (S.coinTotal * coinMult() * diffMods().coins) : 1;
   const stars = 1 + (ratio >= 0.5 ? 1 : 0) + (ratio >= 0.8 && S.lostLives === 0 ? 1 : 0);
-  const bonus = L.boss ? 100 : 10;
+  const fin = S.contents[0].finish, dx = fin ? ball.position.x - fin.position.x : 0;
+  const lane = dx < -1.15 ? 0 : dx > 1.15 ? 2 : 1, gateMult = S.contents[0].gates[lane] || 1;
+  const bonus = (L.boss ? 150 : 20) * gateMult;
   const p = prog(S.worldId), prev = p.stars[S.lvl] || 0;
   p.stars[S.lvl] = Math.max(prev, stars);
   const time = Math.round(S.time * 10) / 10, oldBest = p.best[S.lvl], record = !oldBest || time < oldBest;
@@ -328,11 +379,14 @@ function completeLevel() {
   save.stats.levels++; track('levels');
   if (S.lostLives === 0) { save.stats.nodeath++; track('nodeath'); }
   if (stars === 3) { track('stars3'); if (prev < 3) save.stats.threeStars++; }
-  if (L.boss) save.stats.bosses++;
+  if (L.boss) { save.stats.bosses++; track('boss'); }
+  track('combo', S.bestCombo);
+  save.stats.bestCombo = Math.max(save.stats.bestCombo || 0, S.bestCombo);
+  xpGain(L.boss ? 80 : 25);
   const rares = grantRares();
   persist();
   for (let i = 0; i < 4; i++) sparks.emit(new THREE.Vector3(ball.position.x + (i - 1.5), ball.position.y + 2, ball.position.z - 2), [0xffd23a, 0xff5a8a, 0x5ad1ff, 0x7ee37a][i], 25, 6, 1.2, 5, 1, 0.45);
-  UI.showComplete({ stars, earned, bonus, collected: S.coinTotal, boss: L.boss, time, best: p.best[S.lvl], record: record && !!oldBest, worldId: S.worldId, lvl: S.lvl, rares });
+  UI.showComplete({ stars, earned, bonus, gateMult, combo: S.bestCombo, collected: S.coinTotal, boss: L.boss, time, best: p.best[S.lvl], record: record && !!oldBest, worldId: S.worldId, lvl: S.lvl, rares });
 }
 
 // ---------------- Meteors (boss levels) ----------------
@@ -408,6 +462,19 @@ function update(dt) {
   const ghost = S.power.ghost > 0;
   ball.material.transparent = ghost || ball.userData.baseTransparent; ball.material.opacity = ghost ? 0.4 : ball.userData.baseOpacity;
   extras.position.copy(ball.position); extras.visible = ball.visible;
+  if (aura.visible) { aura.position.copy(ball.position); aura.material.opacity = 0.35 + Math.sin(elapsed * 4) * 0.15; }
+  if (S.power.star > 0 && Math.random() < 0.5) sparks.emit(ball.position, new THREE.Color().setHSL(Math.random(), 1, 0.6), 1, 2, 0.4, 0, 1, 0.3);
+  // Hide far-away track parts (faster on low-end phones)
+  S.cullT -= dt;
+  if (S.cullT <= 0) {
+    S.cullT = 0.25; const bz = ball.position.z;
+    for (const W of S.contents) {
+      for (const s of W.segs) if (s.mesh) s.mesh.visible = s.z1 < bz + 25 && s.z0 > bz - 175 && !(s.fallen && s.mesh.position.y < -20);
+      for (const o of W.obstacles) if (o.type !== 'boulder') o.mesh.visible = Math.abs(o.z - bz) < 175;
+      for (const c of W.checkpoints) c.mesh.visible = Math.abs(c.z - bz) < 175;
+      for (const pd of W.pads) pd.mesh.visible = Math.abs(pd.z - bz) < 175;
+    }
+  }
   // Pet follows with a little lag and bobs
   tmpV.set(ball.position.x + 0.95, ball.position.y + 0.95 + Math.sin(elapsed * 4) * 0.15, ball.position.z + 0.5);
   pet.position.lerp(tmpV, 1 - Math.pow(0.002, dt));
@@ -440,18 +507,22 @@ function updateCollectibles(dt) {
   }
   sparkleTimer -= dt;
   if (sparkleTimer <= 0 && S.contents.length && save.settings.particles) {
-    sparkleTimer = 0.12;
+    sparkleTimer = 0.4;
     const W = S.contents[Math.floor(Math.random() * S.contents.length)];
     const c = W.coins[Math.floor(Math.random() * W.coins.length)];
     if (c && !c.taken && Math.abs(c.pos.z - ball.position.z) < 30) sparks.emit(tmpV.set(c.pos.x + (Math.random() - 0.5) * 0.5, c.pos.y + 0.25, c.pos.z), 0xffffff, 1, 0.4, 0.45, 0, 1, 0.25);
   }
 }
 
+function comboMult() { return S.combo >= 20 ? 3 : S.combo >= 10 ? 2 : S.combo >= 5 ? 1.5 : 1; }
 function collectCoin(c) {
   c.taken = true; c.pop = 0.35;
-  const v = coinMult() * (S.power.x2 > 0 ? 2 : 1) * diffMods().coins;
+  S.combo = S.time - S.lastCoinT < comboWindow() ? S.combo + 1 : 1; S.lastCoinT = S.time; S.bestCombo = Math.max(S.bestCombo, S.combo);
+  if (S.combo === 5 || S.combo === 10 || S.combo === 20) UI.message(t('combo', { n: comboMult() }), 900);
+  if (S.combo % 10 === 0) xpGain(1);
+  const v = coinMult() * (S.power.x2 > 0 ? 2 : 1) * diffMods().coins * comboMult();
   S.coinsF += v; save.stats.coins += 1; track('coins'); sfx.coin();
-  sparks.emit(c.pos, 0xffd23a, 12, 3.2, 0.55, 4, 1, 0.32); sparks.emit(c.pos, 0xffffff, 6, 2, 0.35, 0, 1, 0.25);
+  sparks.emit(c.pos, 0xffd23a, 7, 2.6, 0.45, 4, 1, 0.26); sparks.emit(c.pos, 0xffffff, 3, 1.6, 0.3, 0, 1, 0.2);
 }
 
 function updatePlay(dt, slow) {
@@ -459,7 +530,8 @@ function updatePlay(dt, slow) {
   S.time += dt;
   save.stats.time += dt;
   const joystick = save.settings.control === 'joystick';
-  let speed = (S.endless ? 7.5 + Math.min(5.5, S.distance / 350) : L.speed) * diffMods().speed;
+  let speed = (S.endless ? 8.5 + Math.min(6, S.distance / 330) : L.speed) * diffMods().speed * ({ slow: 0.85, normal: 1, fast: 1.15 }[save.settings.ballSpeed] || 1);
+  if (S.power.star > 0) speed *= 1.25;
   if (S.power.speed > 0) speed *= 1.55;
   if (joystick) speed *= 1 + joy.y * 0.35;
   speed *= slow === 1 ? 1 : 0.7;
@@ -484,9 +556,10 @@ function updatePlay(dt, slow) {
   for (const s of allSegs()) if (s.wind && bp.z <= s.z0 && bp.z >= s.z1) { bp.x += s.wind * dt; S.desiredX += s.wind * dt; }
   if (S.onGround && S.seg && S.seg.type === 'moving') { bp.x += S.seg.delta || 0; S.desiredX += S.seg.delta || 0; }
 
-  // Vertical
+  // Vertical (the fly power-up lets the ball glide over gaps)
   const wasGround = S.onGround;
-  S.vy -= S.gravity * dt; bp.y += S.vy * dt;
+  if (S.power.fly > 0) { const hover = S.lastGroundY + R + 1.4; if (bp.y < hover || S.vy < 0) { S.vy = Math.max(S.vy, 0); bp.y = THREE.MathUtils.damp(bp.y, hover, 4, dt); } }
+  S.vy -= S.gravity * dt * (S.power.fly > 0 ? 0.25 : 1); bp.y += S.vy * dt;
   const g = groundAt(bp.x, bp.z, bp.y - R), bottom = bp.y - R;
   if (g && S.vy <= 0 && (bottom <= g.y || (wasGround && bottom - g.y < 0.3))) {
     if (!wasGround && S.vy < -5) { sfx.land(); sparks.emit(new THREE.Vector3(bp.x, g.y, bp.z), S.env.theme.top, 8, 2, 0.4, 3, 0.5, 0.35); }
@@ -495,7 +568,7 @@ function updatePlay(dt, slow) {
     if (s.type === 'crumble' && !s.triggered) s.triggered = S.wt;
     if ((s.type === 'normal' || s.type === 'ice' || s.type === 'bridge') && !s.wind && s.w >= 3) S.lastSafe.set(g.cx, g.y + R, Math.min(s.z0 - 0.5, bp.z + 1));
   } else { S.onGround = false; S.coyote -= dt; }
-  if (bp.y < S.lastGroundY - 6) { loseLife('fall'); return; }
+  if (bp.y < S.lastGroundY - 6 && S.power.fly <= 0) { loseLife('fall'); return; }
 
   // Crumbling tiles fall shortly after being touched
   for (const s of allSegs()) if (s.type === 'crumble' && s.triggered && !s.fallen && S.wt - s.triggered > 0.5) {
@@ -532,7 +605,9 @@ function updatePlay(dt, slow) {
       sparks.emit(gm.mesh.position, 0x35e6df, 30, 5, 0.9, 3, 1, 0.4); UI.message('💎 +5');
     }
     for (const p of W.powerups) if (!p.taken && p.mesh.position.distanceTo(bp) < 1.2) {
-      p.taken = true; S.power[p.kind] = powerTime(p.kind); sfx.power(); vibrate('light');
+      p.taken = true; sfx.power(); vibrate('light');
+      if (p.kind === 'coinrain') { const n = Math.round(20 * coinMult()); S.coinsF += n; for (let i = 0; i < 6; i++) sparks.emit(tmpV.set(bp.x + (Math.random() - 0.5) * 3, bp.y + 3, bp.z - 2), 0xffd23a, 8, 2, 1.2, 6, 0.3, 0.4); }
+      else S.power[p.kind] = powerTime(p.kind);
       save.stats.powerups++; track('power');
       sparks.emit(p.mesh.position, 0xffffff, 26, 5, 0.8, 2, 1, 0.35); UI.message(t('p_' + p.kind) + '!');
     }
@@ -549,6 +624,19 @@ function updatePlay(dt, slow) {
     }
   }
   UI.hudCoins(coinsEarned());
+  if (S.combo && S.time - S.lastCoinT > comboWindow()) S.combo = 0;
+
+  // Hidden treasure chests (jump to grab)
+  for (const W of S.contents) for (const ch of W.chests) if (!ch.taken && ch.mesh.position.distanceTo(bp) < 1.05) {
+    ch.taken = true; ch.mesh.visible = false;
+    const n = Math.round((60 + Math.random() * 90) * coinMult());
+    S.coinsF += n; save.stats.chests = (save.stats.chests || 0) + 1; save.chests[`${S.worldId}:${S.lvl}`] = true; track('chest'); persist();
+    sfx.gift(); vibrate('medium'); sparks.emit(ch.mesh.position, 0xffd23a, 40, 6, 1, 4, 1, 0.45);
+    UI.message(t('chestFound', { n }), 1800); xpGain(10);
+  }
+
+  // Friendly hints in the first levels
+  if (S.worldId === 'meadow' && S.lvl <= 3 && !S.endless) hintCheck(bp);
 
   // Obstacles
   const ot = S.wt;
@@ -571,6 +659,35 @@ function updatePlay(dt, slow) {
       const p = segAt(o.seg, Math.min(o.cur, o.seg.z0));
       o.mesh.position.set(o.x, p.y + 0.85, o.cur); o.mesh.rotation.x += (o.active ? o.speed : 0) * dt / 0.85; o.mesh.visible = o.active;
       hit = o.active && o.mesh.position.distanceTo(bp) < R + 0.8;
+    } else if (o.type === 'saw') {
+      const p = segAt(o.seg, o.z), x = p.x + Math.sin(ot * o.speed + o.phase) * o.range;
+      o.mesh.position.set(x, p.y, o.z); o.blade.rotation.z -= dt * 14;
+      hit = Math.abs(x - bp.x) < 0.55 + R * 0.75 && Math.abs(o.z - bp.z) < 0.15 + R * 0.8 && bp.y - R < p.y + 1.05;
+    } else if (o.type === 'sweeper') {
+      const a = ot * o.speed + o.phase; o.bar.rotation.y = a;
+      const ux = Math.cos(a), uz = -Math.sin(a), rx = bp.x - o.x, rz = bp.z - o.z, proj = THREE.MathUtils.clamp(rx * ux + rz * uz, -o.len, o.len);
+      hit = Math.hypot(rx - proj * ux, rz - proj * uz) < R * 0.75 + 0.11 && bp.y - R < o.y + 0.48;
+    } else if (o.type === 'wall') {
+      hit = Math.abs(o.z - bp.z) < 0.2 + R * 0.9 && bp.y - R < o.y + 1.4 && Math.abs(bp.x - o.x - o.hole) > 0.8 - R * 0.55;
+    } else if (o.type === 'popspikes') {
+      const up = ((ot + o.phase) % o.period) < o.period * 0.45;
+      o.spikes.position.y = THREE.MathUtils.damp(o.spikes.position.y, up ? 0 : -0.62, 14, dt);
+      hit = o.spikes.position.y > -0.3 && Math.abs(o.z - bp.z) < 0.6 + R * 0.6 && Math.abs(bp.x - o.x) < o.w / 2 && bp.y - R < o.y + 0.5;
+    } else if (o.type === 'crusher') {
+      const k = ((ot + o.phase) % o.period) / o.period;
+      const y = k < 0.45 ? 3.3 : k < 0.53 ? 3.3 - (k - 0.45) / 0.08 * 2.8 : k < 0.75 ? 0.5 : 0.5 + (k - 0.75) / 0.25 * 2.8;
+      if (k >= 0.53 && k < 0.6 && !o.slam) { o.slam = true; if (Math.abs(o.z - bp.z) < 12) { sfx.crumble(); if (save.settings.shake && Math.abs(o.z - bp.z) < 6) S.shake = Math.max(S.shake, 0.15); } }
+      if (k < 0.5) o.slam = false;
+      o.block.position.y = y; o.shadow.material.opacity = 0.15 + (1 - (y - 0.5) / 2.8) * 0.4;
+      hit = y < 1.5 && Math.abs(bp.x - o.x) < 0.75 + R * 0.7 && Math.abs(bp.z - o.z) < 0.65 + R * 0.7;
+    } else if (o.type === 'cannon') {
+      const k = ((ot + o.phase) % o.period) / o.period;
+      o.ball.visible = k < 0.5;
+      if (o.ball.visible) {
+        const f = k / 0.5, from = o.side * (o.w / 2 + 0.6), to = -o.side * (o.w / 2 + 1.2);
+        o.ball.position.set(from + (to - from) * f, 0.42, 0);
+        hit = Math.hypot(o.x + o.ball.position.x - bp.x, o.z - bp.z) < R * 0.8 + 0.32 && bp.y - R < o.y + 0.75;
+      }
     } else if (o.type === 'laser') {
       const on = ((ot + o.phase) % o.period) < o.period * 0.55;
       o.beam.visible = on; o.glow.visible = on;
@@ -602,11 +719,21 @@ function updatePlay(dt, slow) {
   S.hudTimer -= dt;
   if (S.hudTimer <= 0) {
     S.hudTimer = 0.2;
-    UI.hudPowers(S.power);
+    UI.hudPowers(S.power, S.combo >= 5 ? comboMult() : 0);
     if (S.endless) UI.hudDistance(Math.floor(S.distance));
     else UI.hudProgress(THREE.MathUtils.clamp((S.startZ - bp.z) / (S.startZ - L.finishZ), 0, 1));
   }
   if (!S.endless && bp.z < L.finishZ) completeLevel();
+}
+
+function hintCheck(bp) {
+  const ahead = (dz) => { const z = bp.z - dz; for (const s of allSegs()) if (z <= s.z0 && z >= s.z1) return true; return false; };
+  const show = (k) => { if (!S.hints[k] && !save.hintsSeen?.[k + S.lvl]) { S.hints[k] = true; UI.message(t(k), 1800); } };
+  if (!ahead(S.speedNow * 0.6) && ahead(0)) show('hintJump');
+  for (const W of S.contents) {
+    for (const o of W.obstacles) if (o.z < bp.z && bp.z - o.z < S.speedNow * 1.1) show('hintDodge');
+    for (const p of W.powerups) if (!p.taken && p.z < bp.z && bp.z - p.z < S.speedNow * 1.1) show('hintPower');
+  }
 }
 
 // ---------------- Camera ----------------
@@ -716,17 +843,19 @@ function thumbRig() {
   const eyes = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true })); eyes.scale.set(0.78, 0.39, 1); eyes.position.set(0, 0.06, 0.52);
   const face = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true })); face.scale.set(0.8, 0.4, 1); face.position.set(0, 0.02, 0.56);
   const hat = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true })); hat.scale.set(0.62, 0.62, 1); hat.position.set(0, 0.7, 0.05);
-  sc.add(b, eyes, face, hat);
-  thumb = { r, sc, cam, b, rg, eyes, face, hat, cfg: null, spin: 0 };
+  const back = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true })); back.position.set(0, 0.1, -0.1);
+  sc.add(b, eyes, face, hat, back);
+  thumb = { r, sc, cam, b, rg, eyes, face, hat, back, cfg: null, spin: 0 };
   return thumb;
 }
 function setThumb(cfg) {
   const T = thumbRig();
   if (!T.cfg || T.cfg.ball !== cfg.ball) { const old = T.b.material; T.b.material = makeSkinMaterial(cfg.ball); old.dispose(); T.rg.visible = hasRing(cfg.ball); }
-  for (const [slot, spr] of [['eyes', T.eyes], ['face', T.face], ['hat', T.hat]]) {
+  for (const [slot, spr] of [['eyes', T.eyes], ['face', T.face], ['hat', T.hat], ['back', T.back]]) {
     spr.visible = !!cfg[slot]; if (cfg[slot]) { spr.material.map = accTexture(cfg[slot]); spr.material.needsUpdate = true; }
   }
-  if (cfg.hat === 'hat_horns') { T.hat.scale.set(0.8, 0.4, 1); T.hat.position.y = 0.58; } else { T.hat.scale.set(0.62, 0.62, 1); T.hat.position.y = 0.7; }
+  if (cfg.hat && !styleById(cfg.hat)?.emojiHat) { T.hat.scale.set(0.8, 0.4, 1); T.hat.position.y = 0.58; } else { T.hat.scale.set(0.62, 0.62, 1); T.hat.position.y = 0.7; }
+  if (cfg.back) placeBack(T.back, cfg.back);
   T.cfg = { ...cfg };
 }
 const thumbCache = new Map();

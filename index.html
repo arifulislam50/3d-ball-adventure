@@ -27,6 +27,7 @@
       <div id="progress"><div id="progressFill"></div></div>
       <div id="hudDist" class="hud-dist hidden">0 m</div>
       <div id="powers"></div>
+      <div id="comboPill" class="combo hidden"></div>
     </div>
     <div id="message" class="hidden"></div>
     <div id="fps" class="hidden"></div>
@@ -39,10 +40,11 @@
       <button id="playBtn" class="main-btn" data-i18n="play">PLAY</button>
       <div class="menu-grid">
         <button id="levelsBtn" class="secondary-btn">🗺️ <span data-i18n="levels">LEVELS</span></button>
-        <button id="shopBtn" class="secondary-btn">🛒 <span data-i18n="shop">SHOP</span><i class="dot hidden" id="shopDot"></i></button>
+        <button id="shopBtn" class="secondary-btn">🛒 <span data-i18n="shop">SHOP</span><i class="dot hidden" id="shopDot"></i><i class="newtag hidden" id="shopNew">NEW</i></button>
         <button id="endlessBtn" class="secondary-btn">♾️ <span data-i18n="endless">ENDLESS</span></button>
         <button id="missionsBtn" class="secondary-btn">🏆 <span data-i18n="missions">MISSIONS</span><i class="dot hidden" id="missionDot"></i></button>
-        <button id="settingsBtn" class="secondary-btn wide">⚙️ <span data-i18n="settings">SETTINGS</span></button>
+        <button id="profileBtn" class="secondary-btn">👤 <span data-i18n="profile">PROFILE</span></button>
+        <button id="settingsBtn" class="secondary-btn">⚙️ <span data-i18n="settings">SETTINGS</span></button>
       </div>
       <div class="menu-foot" id="menuFoot">3D OFFLINE GAME</div>
     </div>
@@ -89,6 +91,23 @@
       <div class="tabs"><button class="tab on" data-mtab="daily" data-i18n="t_daily">DAILY</button><button class="tab" data-mtab="ach" data-i18n="t_achieve">ACHIEVEMENTS</button></div>
       <p id="missionReset" class="small"></p>
       <div id="missionList" class="list"></div>
+      <button class="secondary-btn back-btn" data-back data-i18n="back">◀ BACK</button>
+    </div>
+
+    <!-- Profile -->
+    <div id="profilePanel" class="panel hidden top">
+      <h1 data-i18n="profile">PROFILE</h1>
+      <div class="prof-card">
+        <div id="profAvatar" class="avatar"></div>
+        <div class="prof-info">
+          <input id="profName" maxlength="16" autocomplete="off" />
+          <div id="profTitle" class="prof-title"></div>
+          <div class="prof-lv"><b id="profLv">LV 1</b> <span id="profXpTxt" class="small"></span></div>
+          <div class="bar"><i id="profXp"></i></div>
+        </div>
+      </div>
+      <div id="profBody" class="list"></div>
+      <button id="profShare" class="secondary-btn" data-i18n="shareProfile">SHARE PROFILE</button>
       <button class="secondary-btn back-btn" data-back data-i18n="back">◀ BACK</button>
     </div>
 

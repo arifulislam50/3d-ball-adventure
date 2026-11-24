@@ -17,7 +17,7 @@ export function segAt(s, z) {
   return { t, x: lerp(s.cx0, s.cx1, t), y: lerp(s.y0, s.y1, t) };
 }
 
-const POWERS = (d) => ['speed', 'shield', 'magnet', 'x2', ...(d >= 0.08 ? ['double'] : []), ...(d >= 0.18 ? ['slow'] : []), ...(d >= 0.25 ? ['ghost'] : [])];
+const POWERS = (d) => ['speed', 'shield', 'magnet', 'x2', 'coinrain', ...(d >= 0.06 ? ['double'] : []), ...(d >= 0.12 ? ['fly'] : []), ...(d >= 0.18 ? ['slow'] : []), ...(d >= 0.25 ? ['ghost', 'star'] : [])];
 
 export class TrackGen {
   constructor(seed, theme, d, boss = false) {
@@ -25,7 +25,7 @@ export class TrackGen {
     this.icy = theme === 'ice'; this.z = 10; this.x = 0; this.y = 0; this.sincePower = 0;
     this.out = this.fresh();
   }
-  fresh() { return { segs: [], coins: [], gems: [], powerups: [], obstacles: [], pads: [], deco: [], checkpoints: [] }; }
+  fresh() { return { segs: [], coins: [], gems: [], powerups: [], obstacles: [], pads: [], deco: [], checkpoints: [], chests: [] }; }
   take() { this.decorate(this.out); const o = this.out; this.out = this.fresh(); return o; }
   pick(a) { return a[Math.floor(this.r() * a.length)]; }
   add(len, o = {}) {
@@ -112,6 +112,35 @@ export class TrackGen {
         const w = 4.4, s = this.add(26, { w }); this.coinLine(s, 6, this.lane(w));
         O.push({ type: 'boulder', seg: s, x: segAt(s, s.z1 + 2).x + this.lane(w) * 0.6, z: s.z1 + 2, speed: 5 + d * 3 });
       } },
+      { min: 0.1, w: 1.3, fn: () => { // spinning saw sliding sideways
+        const w = this.width(), s = this.add(13, { w }); this.coinLine(s, 4, this.lane(w));
+        O.push({ type: 'saw', seg: s, z: lerp(s.z0, s.z1, 0.55), range: w / 2 - 0.6, speed: 1.4 + d * 1.8, phase: R() * 6 });
+      } },
+      { min: 0.12, w: 1.2, fn: () => { // low sweeper bar rotating: jump over it
+        const s = this.add(14, { w: 4.6 }); this.coinLine(s, 4, 0);
+        const zz = lerp(s.z0, s.z1, 0.5), p = segAt(s, zz);
+        O.push({ type: 'sweeper', x: p.x, y: p.y, z: zz, len: 2.1, speed: (R() < 0.5 ? -1 : 1) * (1.4 + d * 1.4), phase: R() * 6 });
+      } },
+      { min: 0.15, w: 1.2, fn: () => { // wall with one opening
+        const w = 4.6, s = this.add(13, { w }); const zz = lerp(s.z0, s.z1, 0.55), p = segAt(s, zz), hole = this.pick([-1, 0, 1]);
+        this.coinLine(s, 4, hole * (w / 3));
+        O.push({ type: 'wall', x: p.x, y: p.y, z: zz, w, hole: hole * (w / 3) });
+      } },
+      { min: 0.18, w: 1.2, fn: () => { // spikes popping out of the floor
+        const s = this.add(14, { w: 4.4 }); this.coinLine(s, 5, 0);
+        const zz = lerp(s.z0, s.z1, 0.5), p = segAt(s, zz);
+        O.push({ type: 'popspikes', x: p.x, y: p.y, z: zz, w: s.w, period: 2.4 - d * 0.5, phase: R() * 3 });
+      } },
+      { min: 0.22, w: 1.1, fn: () => { // crusher block slamming down
+        const w = 4.2, s = this.add(14, { w }); this.coinLine(s, 5, 0);
+        const zz = lerp(s.z0, s.z1, 0.5), p = segAt(s, zz), lane = this.pick([-1, 0, 1]) * 1.2;
+        O.push({ type: 'crusher', x: p.x + lane, y: p.y, z: zz, period: 2.6 - d * 0.6, phase: R() * 3 });
+      } },
+      { min: 0.28, w: 1.1, fn: () => { // cannon shooting balls across the track
+        const w = 4.4, s = this.add(15, { w }); this.coinLine(s, 5, 0);
+        const zz = lerp(s.z0, s.z1, 0.5), p = segAt(s, zz), side = R() < 0.5 ? -1 : 1;
+        O.push({ type: 'cannon', x: p.x, y: p.y, z: zz, w, side, period: 2.2 - d * 0.5, phase: R() * 2 });
+      } },
       { min: 0.35, w: 1.2, fn: () => { // wind zone
         const dir = R() < 0.5 ? -1 : 1, s = this.add(16, { w: 4.8, wind: dir * (2.2 + d * 2) }); this.coinLine(s, 6, -dir * 1.2);
       } },
@@ -142,25 +171,36 @@ export class TrackGen {
   }
 }
 
+export const levelSpeed = (d, boss) => 8.3 + d * 6 + (boss ? 0.4 : 0);
+
 export function generateLevel(worldId, lvl) {
   const wi = WORLDS.findIndex((w) => w.id === worldId), boss = lvl === LEVELS_PER_WORLD;
   const d = difficulty(wi, lvl);
   const gen = new TrackGen((wi + 1) * 7919 + lvl * 131, worldId, d, boss);
   gen.start();
-  gen.run((150 + d * 150) * (boss ? 1.35 : 1));
+  // roughly 40-60 seconds of rolling (bosses longer)
+  gen.run(levelSpeed(d, boss) * (40 + 18 * d) * (boss ? 1.3 : 1));
   const end = gen.add(16, { w: 7, type: 'normal' });
   gen.out.gems.push({ x: end.cx0, y: gen.y + 1.2, z: end.z0 - 3 });
   const finishZ = end.z0 - 8;
   // Checkpoints at roughly 1/3 and 2/3
-  for (const frac of [0.34, 0.67]) {
+  for (const frac of [0.25, 0.5, 0.75]) {
     const want = 10 - (10 - finishZ) * frac; let best = null;
     for (const s of gen.out.segs) if (s.type !== 'moving' && s.type !== 'crumble' && !s.wind && s.w >= 3.5 && s.y0 === s.y1 && s.z0 < 0) {
       if (!best || Math.abs(s.z0 - want) < Math.abs(best.z0 - want)) best = s;
     }
     if (best && !gen.out.checkpoints.find((c) => c.seg === best)) gen.out.checkpoints.push({ seg: best, x: best.cx0, y: best.y0, z: best.z0 - 1.5 });
   }
+  // One hidden treasure chest floating above a straight part of the track: jump to grab it.
+  const straights = gen.out.segs.filter((s) => (s.type === 'normal' || s.type === 'ice') && s.z0 < -40 && s.z1 > finishZ + 30 && s.cx0 === s.cx1 && s.y0 === s.y1 && !s.wind && s.z0 - s.z1 > 10);
+  if (straights.length) {
+    const s = straights[Math.floor(gen.r() * straights.length)], zz = lerp(s.z0, s.z1, 0.5);
+    gen.out.chests.push({ x: s.cx0 + gen.pick([-1, 1]) * (s.w / 2 - 0.9), y: s.y0 + 2.4, z: zz });
+  }
+  const gates = [2, 3, 5]; for (let i = 2; i > 0; i--) { const j = Math.floor(gen.r() * (i + 1)); [gates[i], gates[j]] = [gates[j], gates[i]]; }
+  gen.out.gates = gates;
   const data = gen.take();
-  return { ...data, worldId, lvl, boss, d, theme: worldId, speed: 7 + d * 5.5 + (boss ? 0.3 : 0), finishZ, icy: worldId === 'ice', length: 10 - finishZ };
+  return { ...data, gates, worldId, lvl, boss, d, theme: worldId, speed: levelSpeed(d, boss), finishZ, icy: worldId === 'ice' || worldId === 'arctic', length: 10 - finishZ };
 }
 
 // Endless: one generator that keeps producing chunks, harder the further you go.

@@ -6,7 +6,7 @@ Copy these into **Play Console → Grow → Store presence → Main store listin
 Marblo: Island Roll 3D
 
 ## Short description (max 80)
-Roll, jump & dodge across 10 magical worlds. 120 levels, Endless mode, offline!
+Roll, jump & dodge across 25 worlds. 150 levels, Endless mode, fully offline!
 
 ## Full description
 Roll into a bright 3D adventure! Guide your ball across floating islands, deserts, candy land, under the sea, volcanoes and outer space. Drag left or right to steer and tap to jump: the ball rolls on its own!
@@ -14,23 +14,23 @@ Roll into a bright 3D adventure! Guide your ball across floating islands, desert
 ★ SIMPLE ONE-FINGER CONTROLS
 Drag to steer, tap or swipe up to jump. A classic joystick is also available in Settings.
 
-★ 120 LEVELS IN 10 WORLDS
-Green Meadow, Sunset Desert, Frozen Peaks, Neon City, Candy Land, Under the Sea, Volcano, Cherry Garden, Magic Forest and Outer Space (with low gravity!). Every 12th level is a BOSS level with falling meteors.
+★ 150 LEVELS IN 25 WORLDS
+From Green Meadow, Bangla Village, Sundarbans and Cox's Bazar Beach to Candy Land, Under the Sea, Volcano, Pirate Island, Dino Valley, Crystal Caves, Sky Kingdom, Robot Factory, Moon Base and Outer Space. Every 6th level is a BOSS level with falling meteors.
 
 ★ ENDLESS MODE
 How far can you roll? The track never ends and gets faster and harder.
 
 ★ OBSTACLES TO DODGE
-Bumpers, spikes, swinging hammers, rolling boulders, lasers, crumbling tiles, wind and meteors.
+Saws, sweepers, crushers, cannons, walls, lasers, hammers, boulders, crumbling tiles, wind, meteors and more.
 
-★ 7 POWER-UPS
-⚡ Speed, 🛡️ Shield, 🧲 Magnet, 🪽 Double Jump, 🐢 Slow-mo, 👻 Ghost and ✖️2 Coins. Jump pads and speed strips too!
+★ 10 POWER-UPS
+⚡ Speed, 🛡️ Shield, 🧲 Magnet, 🪽 Double Jump, 🐢 Slow-mo, 👻 Ghost, ✖️2 Coins, 🌟 Super Star, 🎈 Fly and 🪙 Coin Rain. Coin combos, hidden treasure chests and ×5 bonus gates!
 
 ★ HUGE SHOP
-33 balls (5 rare ones you must earn), 13 trails, eyes, hats, glasses, cute pets that collect coins for you, and upgrades.
+60 balls (10 legendary, 8 rare), 25 trails, 30 style items incl. wings and capes, 12 pets that collect coins for you, upgrades and the Legend Pack.
 
 ★ DAILY FUN
-Daily gift, lucky spin, mystery boxes, daily missions and 25 achievements.
+Daily gift, lucky spin, mystery boxes, 5 daily missions, 69 achievements and your own profile with levels, titles and frames.
 
 ★ BANGLA & ENGLISH
 Play in English or বাংলা.

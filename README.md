@@ -3,16 +3,16 @@
 A mobile 3D rolling-ball adventure built with **Three.js + Vite + Capacitor 8** (Android).
 
 ## Features
-- Ball rolls by itself: **drag** to steer, **tap** / swipe up / button to jump (joystick mode in Settings)
-- **120 levels in 10 worlds** (Meadow, Desert, Ice, Neon City, Candy, Ocean, Volcano, Cherry, Magic Forest, Space); level 12 of each world is a **boss** level with meteors
+- Ball rolls by itself: **drag** to steer, **tap** / swipe up / button to jump (joystick mode in Settings); ball speed setting
+- **150 levels in 25 worlds** (6 levels each, a new world every 6 levels), incl. Bangla Village, Sundarbans and Cox's Bazar; level 6 of each world is a **boss** level with meteors; levels last ~40-60 s with 3 checkpoints
 - **Endless mode** with best distance
-- Obstacles: bumpers, spikes, hammers, boulders, lasers, crumbling tiles, wind, meteors; jump pads and speed strips
-- Power-ups: speed, shield, magnet, double jump, slow-mo, ghost, x2 coins
-- 3 lives, checkpoints, 1-3 stars, best times, continue tickets
-- Shop: 33 balls (5 rare), worlds, 13 trails, eyes/hats/glasses, pets, upgrades, daily gift, lucky spin, mystery box, daily offer
-- Daily missions, 25 achievements, statistics
-- Full settings (sound volumes, vibration, controls, sensitivity, difficulty, graphics, FPS, camera, battery saver, big text…) and **English / বাংলা**
-- Synthesized music per world, haptics, Android back button, auto-pause
+- 14 hazards: bumpers, saws, spikes, pop-up spikes, sweepers, walls with an opening, crushers, cannons, hammers, boulders, lasers, crumbling tiles, wind, meteors; jump pads and speed strips
+- 10 power-ups: speed, shield, magnet, double jump, slow-mo, ghost, x2 coins, super star, fly, coin rain
+- Coin combos, hidden treasure chest in every level, x2 / x3 / x5 bonus gates at the finish, 3 lives, stars, best times, continue tickets, help after 3 failures, hints in the first levels
+- Shop: 60 balls (10 legendary, 8 rare), 25 worlds, 25 trails, 30 style items (eyes, hats, glasses, wings/cape/jetpack), 12 pets, 8 upgrades, Legend Pack, daily gift, lucky spin, mystery box, daily offer, live 3D preview
+- Profile: name, XP & level, titles, frames, records, collection, share
+- 5 daily missions, 69 achievements, statistics
+- Full settings and **English / বাংলা**; generated music for every world (faster on boss levels); haptics; Android back button; auto-pause; far-away track hidden for speed
 
 ## Project layout
 | Path | What |

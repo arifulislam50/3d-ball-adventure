@@ -8,20 +8,23 @@ export const defaults = () => ({
   worlds: ['meadow', 'desert'],
   progress: {}, // progress[worldId] = { unlocked, stars: {lvl: n}, best: {lvl: seconds} }
   owned: { ball: ['classic'], trail: ['basic'], style: [], pet: [] },
-  equip: { ball: 'classic', trail: 'basic', eyes: null, hat: null, face: null, pet: null },
-  upgrades: { shield: 0, magnet: 0, speed: 0, lives: 0, coinValue: 0 },
+  equip: { ball: 'classic', trail: 'basic', eyes: null, hat: null, face: null, back: null, pet: null },
+  upgrades: { shield: 0, magnet: 0, speed: 0, double: 0, combo: 0, lives: 0, coinValue: 0, freeShield: 0 },
   items: { tickets: 1, startShield: 0, skip: 0 },
   daily: { last: '', streak: 0, best: 0 },
   spin: { last: '' },
   missions: { date: '', list: [] },
   achievements: {},
   seen: {},
-  stats: { time: 0, coins: 0, jumps: 0, falls: 0, hits: 0, levels: 0, bosses: 0, threeStars: 0, endlessBest: 0, powerups: 0, nodeath: 0 },
+  chests: {},
+  profile: { name: '', xp: 0, level: 1, title: 'rookie', frame: 'none', claimedLevel: 1 },
+  worldPlays: {},
+  stats: { time: 0, coins: 0, jumps: 0, falls: 0, hits: 0, levels: 0, bosses: 0, threeStars: 0, endlessBest: 0, powerups: 0, nodeath: 0, chests: 0, bestCombo: 0, bestLevelCoins: 0, fastest: 0, purchases: 0 },
   lastWorld: 'meadow',
   tutorialDone: false,
   settings: {
     music: true, sfx: true, musicVol: 0.7, sfxVol: 0.8, vibe: true, vibeStrength: 'normal',
-    control: 'drag', sens: 9, jump: 'tap', difficulty: 'normal',
+    control: 'drag', sens: 9, jump: 'tap', difficulty: 'normal', ballSpeed: 'normal',
     quality: 'auto', fps: 60, shadows: true, trailFx: true, particles: true, camera: 'normal', shake: true,
     showFps: false, battery: false, bigText: false, lang: defaultLang(),
   },
@@ -39,7 +42,11 @@ function load() {
   const data = defaults();
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return merge(data, JSON.parse(raw));
+    if (raw) {
+      const m = merge(data, JSON.parse(raw));
+      for (const w in m.progress) m.progress[w].unlocked = Math.min(6, m.progress[w].unlocked || 1);
+      return m;
+    }
     // Migrate version 1 saves
     const v1 = JSON.parse(localStorage.getItem('marblo-save-v1') || 'null');
     if (v1) {

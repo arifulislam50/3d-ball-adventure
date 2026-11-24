@@ -107,8 +107,21 @@ const noteOf = (s, deg, oct = 0) => {
   return midi(s.root + s.scale[i] + 12 * (o + oct));
 };
 
-export function playMusic(theme) {
-  song = SONGS[theme] || SONGS.meadow;
+// Worlds without a hand-written song get one generated from their name.
+const SCALES = [[0, 2, 4, 7, 9], [0, 2, 3, 5, 7, 9, 10], [0, 2, 4, 5, 7, 9, 11], [0, 3, 5, 7, 10], [0, 1, 4, 5, 7, 8, 10], [0, 2, 3, 7, 8]];
+const WAVES = ['triangle', 'square', 'sine', 'sawtooth'];
+function makeSong(theme) {
+  let h = 7; for (const c of theme) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const r = () => ((h = (h * 1103515245 + 12345) >>> 0) / 4294967296);
+  const scale = SCALES[Math.floor(r() * SCALES.length)], len = scale.length;
+  const melody = Array.from({ length: 16 }, (_, i) => (i % 4 === 3 && r() < 0.5 ? -1 : Math.floor(r() * (len + 2))));
+  const bass = Array.from({ length: 8 }, (_, i) => [0, 0, 3, 3, 4, 4, 0, 2][i] % len);
+  return { bpm: 92 + Math.floor(r() * 40), root: 55 + Math.floor(r() * 12), scale, wave: WAVES[Math.floor(r() * WAVES.length)], melody, bass };
+}
+
+export function playMusic(theme, boss = false) {
+  const base = SONGS[theme] || (SONGS[theme] = makeSong(theme));
+  song = boss ? { ...base, bpm: Math.round(base.bpm * 1.2), wave: 'sawtooth', root: base.root - 2 } : base;
   if (ctx) startScheduler();
 }
 function startScheduler() {

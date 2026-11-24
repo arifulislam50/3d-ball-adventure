@@ -2,14 +2,14 @@
 import { GAME, WORLDS, LEVELS_PER_WORLD, worldById, todayStr } from './config.js';
 import { save, persist, prog, resetSave } from './storage.js';
 import { t, tName, lang, applyI18n } from './i18n.js';
-import { BALLS, TRAILS, STYLE, PETS, UPGRADES, SPECIAL, DAILY_REWARDS, SPIN_PRIZES, ballById, rareUnlocked } from './catalog.js';
-import { ensureMissions, ACHIEVEMENTS, claimableCount, giftAvailable, giftDay, claimGift, freeSpin, spinWheel, givePrize, openMysteryBox, dailyOffer, ownsWorld } from './progress.js';
+import { BALLS, TRAILS, STYLE, PETS, UPGRADES, SPECIAL, DAILY_REWARDS, SPIN_PRIZES, ballById, rareUnlocked, LEGEND_PACK } from './catalog.js';
+import { ensureMissions, ACHIEVEMENTS, claimableCount, giftAvailable, giftDay, claimGift, freeSpin, spinWheel, givePrize, openMysteryBox, dailyOffer, ownsWorld, xpNeeded, TITLES, FRAMES, legendPackOwned, buyLegendPack, affordableNew, markSeen } from './progress.js';
 import { THEMES } from './world.js';
 import { shareText, openUrl } from './native.js';
 
 const $ = (id) => document.getElementById(id);
 let api = null;
-const PANELS = ['menu', 'levelsPanel', 'shopPanel', 'endlessPanel', 'missionsPanel', 'settingsPanel', 'howtoPanel', 'pausePanel', 'completePanel', 'gameoverPanel'];
+const PANELS = ['menu', 'levelsPanel', 'shopPanel', 'endlessPanel', 'missionsPanel', 'settingsPanel', 'howtoPanel', 'pausePanel', 'completePanel', 'gameoverPanel', 'profilePanel'];
 let current = 'menu', settingsReturn = 'menu';
 const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 const coinSpan = (n) => `<span class="coin-ico"></span>${n}`;
@@ -38,7 +38,10 @@ export function hudLives(l, max) { $('lives').textContent = '❤️'.repeat(Math
 export function hudCoins(n) { $('score').textContent = n; }
 export function hudProgress(f) { $('progressFill').style.width = `${f * 100}%`; }
 export function hudDistance(m) { $('hudDist').textContent = t('distance', { n: m }); }
-export function hudPowers(p) { $('powers').innerHTML = Object.keys(p).filter((k) => p[k] > 0.05).map((k) => `<span class="power">${t('p_' + k)} ${Math.ceil(p[k])}s</span>`).join(''); }
+export function hudPowers(p, combo = 0) {
+  $('powers').innerHTML = Object.keys(p).filter((k) => p[k] > 0.05).map((k) => `<span class="power">${t('p_' + k)} ${Math.ceil(p[k])}s</span>`).join('');
+  const c = $('comboPill'); c.classList.toggle('hidden', !combo); if (combo) c.textContent = `🔥 ×${combo}`;
+}
 export function fps(n) { const f = $('fps'); f.classList.toggle('hidden', !save.settings.showFps); f.textContent = `${n} FPS`; }
 export function showTutorial(on) { $('tutorial').classList.toggle('hidden', !on); }
 export function showPause(on) { if (on) { showPanel('pausePanel'); $('controls').classList.add('hidden'); } else { showPanel(null); $('controls').classList.toggle('hidden', save.settings.control !== 'joystick'); } }
@@ -63,6 +66,7 @@ function updateWallets() { document.querySelectorAll('.walletAmt').forEach((e) =
 function updateDots() {
   $('shopDot').classList.toggle('hidden', !(giftAvailable() || freeSpin()));
   $('missionDot').classList.toggle('hidden', claimableCount() === 0);
+  $('shopNew').classList.toggle('hidden', !affordableNew() || !$('shopDot').classList.contains('hidden'));
 }
 export function goMenu() {
   hudHide(); showTutorial(false); updateWallets(); updateDots(); showPanel('menu'); api.showMenuScene();
@@ -108,15 +112,15 @@ function buy(price, give, after) {
   save.coins -= price; give(); persist(); api.sfx.buy(); api.vibrate('light'); updateWallets(); after && after();
   return true;
 }
-function preview(cfg = {}) { api.previewSet({ ball: save.equip.ball, eyes: save.equip.eyes, hat: save.equip.hat, face: save.equip.face, ...cfg }); }
+function preview(cfg = {}) { api.previewSet({ ball: save.equip.ball, eyes: save.equip.eyes, hat: save.equip.hat, face: save.equip.face, back: save.equip.back, ...cfg }); }
 function trailSwatch(tr) {
   if (tr.emoji) return `<div class="ico" style="background:rgba(255,255,255,.15)">${tr.emoji}</div>`;
   const g = { ball: '#ffb52e,#ffe28a', rainbow: '#ff4f4f,#ffe14a,#5ad65a,#3fb7ff,#b05aff', fire: '#fff27a,#ff7a1a,#c81a00', ice: '#ffffff,#8ad8ff', gold: '#fff6c0,#ffd23a,#c89400', neon: '#2ff7ff,#ff4fd8' }[tr.look] || '#7ad8ff,#ffffff';
   return `<div class="ico" style="background:linear-gradient(135deg,${g})">${tr.mode === 'spark' ? '⚡' : ''}</div>`;
 }
-function itemCard({ thumb, name, owned, equipped, price, rare, rareHow, onBuy, onEquip, onPreview, removable }) {
-  const d = document.createElement('div'); d.className = `item${equipped ? ' equipped' : ''}`;
-  d.innerHTML = `${rare ? `<span class="rare">${t('rare')}</span>` : ''}${thumb}<b>${name}</b>`;
+function itemCard({ thumb, name, owned, equipped, price, rare, rareHow, onBuy, onEquip, onPreview, removable, legend }) {
+  const d = document.createElement('div'); d.className = `item${equipped ? ' equipped' : ''}${legend ? ' legend' : ''}`;
+  d.innerHTML = `${rare ? `<span class="rare">${t('rare')}</span>` : ''}${legend ? `<span class="leg">${t('legendary')}</span>` : ''}${thumb}<b>${name}</b>`;
   const b = document.createElement('button');
   if (equipped) { b.textContent = removable ? t('remove') : t('equipped'); b.className = removable ? 'equip' : 'on'; if (removable) click(b, onEquip); }
   else if (owned) { b.textContent = t('equip'); b.className = 'equip'; click(b, onEquip); }
@@ -150,7 +154,7 @@ function buildShop() {
   if (shopTab === 'balls') {
     for (const b of BALLS) {
       const owned = save.owned.ball.includes(b.id);
-      grid.appendChild(itemCard({ thumb: `<img src="${api.ballThumb(b.id)}" loading="lazy">`, name: b.name, owned, equipped: save.equip.ball === b.id, price: b.price,
+      grid.appendChild(itemCard({ thumb: `<img src="${api.ballThumb(b.id)}" loading="lazy">`, name: b.name, owned, equipped: save.equip.ball === b.id, price: b.price, legend: b.legendary,
         rare: !!b.rare && !owned, rareHow: b.rare ? t('rare_' + b.rare) : '',
         onBuy: () => buy(b.price, () => { save.owned.ball.push(b.id); save.equip.ball = b.id; }, re),
         onEquip: () => { save.equip.ball = b.id; persist(); re(); }, onPreview: () => preview({ ball: b.id }) }));
@@ -168,15 +172,15 @@ function buildShop() {
       const owned = save.owned.trail.includes(tr.id);
       grid.appendChild(itemCard({ thumb: trailSwatch(tr), name: tr.name, owned, equipped: save.equip.trail === tr.id, price: tr.price,
         onBuy: () => buy(tr.price, () => { save.owned.trail.push(tr.id); save.equip.trail = tr.id; }, re),
-        onEquip: () => { save.equip.trail = tr.id; persist(); re(); } }));
+        onEquip: () => { save.equip.trail = tr.id; persist(); re(); }, legend: tr.price >= 2000 }));
     }
   } else if (shopTab === 'style') {
-    const groups = [['eyes', t('eyes')], ['hat', t('hats')], ['face', t('face')]];
+    const groups = [['eyes', t('eyes')], ['hat', t('hats')], ['face', t('face')], ['back', t('backSlot')]];
     for (const [slot, label] of groups) {
       const h = document.createElement('div'); h.className = 'subhead'; h.textContent = label; grid.appendChild(h);
       for (const s of STYLE.filter((x) => x.slot === slot)) {
         const owned = save.owned.style.includes(s.id), eq = save.equip[slot] === s.id;
-        grid.appendChild(itemCard({ thumb: `<div class="ico" style="background:rgba(255,255,255,.15)">${s.icon}</div>`, name: s.name, owned, equipped: eq, price: s.price, removable: true,
+        grid.appendChild(itemCard({ thumb: `<div class="ico" style="background:rgba(255,255,255,.15)">${s.icon}</div>`, name: s.name, owned, equipped: eq, price: s.price, removable: true, legend: s.price >= 1500,
           onBuy: () => buy(s.price, () => { save.owned.style.push(s.id); save.equip[slot] = s.id; }, re),
           onEquip: () => { save.equip[slot] = eq ? null : s.id; persist(); re(); }, onPreview: () => preview({ [slot]: s.id }) }));
       }
@@ -184,7 +188,7 @@ function buildShop() {
     const h = document.createElement('div'); h.className = 'subhead'; h.textContent = t('pets'); grid.appendChild(h);
     for (const p of PETS) {
       const owned = save.owned.pet.includes(p.id), eq = save.equip.pet === p.id;
-      grid.appendChild(itemCard({ thumb: `<div class="ico" style="background:rgba(255,255,255,.15)">${p.icon}</div>`, name: p.name, owned, equipped: eq, price: p.price, removable: true,
+      grid.appendChild(itemCard({ thumb: `<div class="ico" style="background:rgba(255,255,255,.15)">${p.icon}</div>`, name: p.name, owned, equipped: eq, price: p.price, removable: true, legend: p.price >= 3000,
         onBuy: () => buy(p.price, () => { save.owned.pet.push(p.id); save.equip.pet = p.id; }, re),
         onEquip: () => { save.equip.pet = eq ? null : p.id; persist(); re(); } }));
     }
@@ -209,6 +213,9 @@ function buildShop() {
     addRow('🎁', t('dailyGift'), `${t('dayN', { n: gday })} · ${coinSpan(DAILY_REWARDS[gday - 1])}${gday === 7 ? ' + 📦' : ''}`, giftAvailable() ? t('claim') : t('claimed'),
       () => { const r = claimGift(); if (r) { api.sfx.gift(); popup('🎁', t('dailyGift'), `${t('dayN', { n: r.day })}: ${coinSpan(r.coins)}`, () => r.box && rewardPopup(r.box)); buildShop(); updateDots(); } }, giftAvailable() ? 'green' : 'done', !giftAvailable());
     addRow('🎡', t('spin'), '', freeSpin() ? t('spinFree') : t('spinCost', { n: SPECIAL.spin }), openSpin, freeSpin() ? 'green' : '');
+    addRow('🏆', t('legendPack'), `${t('legendPackSub')}`, legendPackOwned() ? '✔' : coinSpan(SPECIAL.legendPack),
+      () => { if (buyLegendPack()) { api.sfx.buy(); api.applyLook(); updateWallets(); popup(`<img src="${api.ballThumb(LEGEND_PACK.ball)}" width="90">`, t('legendPack'), t('legendPackSub')); buildShop(); } else { api.sfx.error(); message(t('notEnough')); } },
+      legendPackOwned() ? 'done' : '', legendPackOwned());
     addRow('📦', t('mystery'), '', coinSpan(SPECIAL.mystery), () => buy(SPECIAL.mystery, () => {}, () => { const got = openMysteryBox(); rewardPopup(got); api.applyLook(); buildShop(); }));
     addRow('🎟️', t('tickets'), t('youHave', { n: save.items.tickets }), coinSpan(SPECIAL.tickets), () => buy(SPECIAL.tickets, () => { save.items.tickets += 3; }, buildShop));
     addRow('🛡️', t('startShield'), t('youHave', { n: save.items.startShield }), coinSpan(SPECIAL.startShield), () => buy(SPECIAL.startShield, () => { save.items.startShield += 3; }, buildShop));
@@ -301,7 +308,7 @@ function buildSettings() {
 
   sec('s_language'); choice('lang', t('language'), ['en', 'bn'], ['English', 'বাংলা']);
   sec('s_sound'); toggle('music', t('music')); slider('musicVol', t('musicVol'), 0, 1, 0.05); toggle('sfx', t('sfx')); slider('sfxVol', t('sfxVol'), 0, 1, 0.05); toggle('vibe', t('vibe'));
-  sec('s_controls'); choice('control', t('controls'), ['drag', 'joystick']); slider('sens', t('sens'), 5, 14, 0.5); choice('jump', t('jumpBy'), ['tap', 'swipe', 'button']); choice('difficulty', t('difficultyLbl'), ['easy', 'normal', 'hard']);
+  sec('s_controls'); choice('control', t('controls'), ['drag', 'joystick']); slider('sens', t('sens'), 5, 14, 0.5); choice('jump', t('jumpBy'), ['tap', 'swipe', 'button']); choice('difficulty', t('difficultyLbl'), ['easy', 'normal', 'hard']); choice('ballSpeed', t('ballSpeed'), ['slow', 'normal', 'fast']);
   sec('s_graphics'); choice('quality', t('quality'), ['auto', 'low', 'medium', 'high']); toggle('battery', t('battery'));
   const more = link(showMore ? t('s_less') : t('s_more'), () => { showMore = !showMore; buildSettings(); }); more.style.textAlign = 'center';
   if (showMore) {
@@ -329,6 +336,42 @@ function buildSettings() {
   }
 }
 
+async function doShareText(text) { const r = await shareText(GAME.name, text, GAME.storeUrl); if (r === 'copied') message('📋 ✔'); }
+
+function buildProfile() {
+  const p = save.profile, st = save.stats;
+  $('profName').value = p.name || ''; $('profName').placeholder = t('namePh');
+  const fr = FRAMES.find((f) => f.id === p.frame) || FRAMES[0];
+  $('profAvatar').style.background = fr.css;
+  $('profAvatar').innerHTML = `<img src="${api.ballThumb(save.equip.ball)}">`;
+  $('profTitle').textContent = '🏷️ ' + t(TITLES.find((x) => x.id === p.title)?.key || 'ti_rookie');
+  $('profLv').textContent = `${t('lv')} ${p.level}`;
+  $('profXpTxt').textContent = t('xp', { a: p.xp, b: xpNeeded(p.level) });
+  $('profXp').style.width = `${Math.min(100, p.xp / xpNeeded(p.level) * 100)}%`;
+  const body = $('profBody'); body.innerHTML = '';
+  const sec = (k) => { const d = document.createElement('div'); d.className = 'sec'; d.textContent = t(k); body.appendChild(d); };
+  // titles
+  sec('title'); let box = document.createElement('div'); box.className = 'opts'; body.appendChild(box);
+  TITLES.forEach((ti) => { const b = document.createElement('button'), ok = ti.ok(); b.className = `opt${p.title === ti.id ? ' on' : ''}`; b.textContent = (ok ? '' : '🔒 ') + t(ti.key); b.disabled = !ok; click(b, () => { p.title = ti.id; persist(); buildProfile(); }); box.appendChild(b); });
+  // frames
+  sec('frame'); box = document.createElement('div'); box.className = 'opts'; body.appendChild(box);
+  FRAMES.forEach((f) => { const b = document.createElement('button'), ok = p.level >= f.lvl; b.className = `opt fr${p.frame === f.id ? ' on' : ''}`; b.style.background = f.css; b.title = ok ? '' : t('unlockAt', { n: f.lvl }); b.disabled = !ok; if (!ok) b.textContent = '🔒'; click(b, () => { p.frame = f.id; persist(); buildProfile(); }); box.appendChild(b); });
+  // records
+  sec('records');
+  const fav = Object.entries(save.worldPlays || {}).sort((a, b) => b[1] - a[1])[0];
+  const favW = fav ? worldById(fav[0]) : null;
+  const g = document.createElement('div'); g.className = 'statgrid';
+  [[t('r_levels'), st.levels], [t('r_combo'), st.bestCombo || 0], [t('r_endless'), `${st.endlessBest} m`], [t('r_streak'), `🔥 ${save.daily.best || 0}`], [t('r_chests'), `🧰 ${st.chests || 0}`], [t('r_plays'), favW ? `${favW.icon} ${tName(favW.name)}` : '—']]
+    .forEach(([a, b]) => { g.innerHTML += `<span>${a}</span><b>${b}</b>`; });
+  body.appendChild(g);
+  // collection
+  sec('collection');
+  const c = document.createElement('div'); c.className = 'statgrid';
+  [[t('c_balls'), `${save.owned.ball.length} / ${BALLS.length}`], [t('c_trails'), `${save.owned.trail.length} / ${TRAILS.length}`], [t('c_style'), `${save.owned.style.length} / ${STYLE.length}`], [t('c_pets'), `${save.owned.pet.length} / ${PETS.length}`], [t('c_worlds'), `${WORLDS.filter((w) => ownsWorld(w.id)).length} / ${WORLDS.length}`]]
+    .forEach(([a, b]) => { c.innerHTML += `<span>${a}</span><b>${b}</b>`; });
+  body.appendChild(c);
+}
+
 async function doShare(score) {
   const r = await shareText(GAME.name, t('shareText', { n: score }), GAME.storeUrl);
   if (r === 'copied') message('📋 ✔');
@@ -340,7 +383,8 @@ export function showComplete(o) {
   $('completeTitle').textContent = o.boss ? t('bossDefeated') : t('levelComplete');
   const spans = $('starRow').children; [...spans].forEach((s) => s.classList.remove('on'));
   for (let i = 0; i < o.stars; i++) setTimeout(() => { spans[i].classList.add('on'); api.sfx.star(i); }, 400 + i * 350);
-  $('completeText').innerHTML = (o.boss ? t('allDone', { n: o.earned + o.bonus }) : t('coinsGained', { n: o.earned + o.bonus, c: o.earned, t: o.collected }));
+  $('completeText').innerHTML = (o.boss ? t('allDone', { n: o.earned + o.bonus }) : t('coinsGained', { n: o.earned + o.bonus, c: o.earned, t: o.collected }))
+    + (o.gateMult > 1 ? `<br>🚪 ${t('gateBonus', { n: o.gateMult })}` : '') + (o.combo >= 5 ? ` · 🔥 ${t('bestComboTxt', { n: o.combo })}` : '');
   $('completeTime').textContent = `${t('time', { t: o.time })} · ${o.record ? t('newRecord') : t('best', { t: o.best })}`;
   const lastInWorld = o.lvl >= LEVELS_PER_WORLD;
   const wi = WORLDS.findIndex((w) => w.id === o.worldId), nextW = WORLDS[wi + 1];
@@ -400,7 +444,11 @@ export function init(a) {
 
   click('playBtn', () => { const w = ownsWorld(save.lastWorld) ? save.lastWorld : 'meadow'; api.startLevel(w, prog(w).unlocked); });
   click('levelsBtn', () => { selWorld = ownsWorld(save.lastWorld) ? save.lastWorld : 'meadow'; buildLevels(); showPanel('levelsPanel'); });
-  click('shopBtn', () => { buildShop(); showPanel('shopPanel'); api.previewActive(true); });
+  click('shopBtn', () => { buildShop(); showPanel('shopPanel'); api.previewActive(true); markSeen(); });
+  click('profileBtn', () => { buildProfile(); showPanel('profilePanel'); });
+  click('profShare', () => { const p = save.profile; doShareText(t('profileShare', { name: p.name || 'Player', lvl: p.level, title: t(TITLES.find((x) => x.id === p.title)?.key || 'ti_rookie'), lv: save.stats.levels, coins: save.stats.coins, run: save.stats.endlessBest })); });
+  $('profName').addEventListener('change', () => { save.profile.name = $('profName').value.trim().slice(0, 16); persist(); });
+  $('profName').addEventListener('pointerdown', (e) => e.stopPropagation());
   click('endlessBtn', () => { buildEndless(); showPanel('endlessPanel'); });
   click('missionsBtn', () => { buildMissions(); showPanel('missionsPanel'); });
   click('settingsBtn', () => { settingsReturn = 'menu'; buildSettings(); showPanel('settingsPanel'); });
